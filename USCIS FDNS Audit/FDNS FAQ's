@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FDNS Audit FAQ</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7fa;
+    color: #2c3e50;
+    margin: 0;
+    padding: 20px;
+  }
+  .container {
+    max-width: 900px;
+    margin: 20px auto;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    padding: 30px 40px;
+  }
+  h1 {
+    font-size: 28px;
+    color: #0d47a1;
+    margin-bottom: 25px;
+    font-weight: bold;
+    border-bottom: 3px solid #0d47a1;
+    padding-bottom: 5px;
+  }
+  h2 {
+    font-size: 20px;
+    color: #2563eb;
+    margin-top: 30px;
+    margin-bottom: 15px;
+  }
+  ul {
+    padding-left: 20px;
+    margin-bottom: 25px;
+  }
+  li {
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  p {
+    margin-bottom: 18px;
+    line-height: 1.6;
+    font-size: 16px;
+    color: #444;
+  }
+  a {
+    color: #0d47a1;
+    text-decoration: underline;
+  }
+  a:hover {
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>FAQ’s: FDNS Audit</h1>
+
+    <h2>1. What happens during the FDNS site visits?</h2>
+    <p>During site visits, officers may:</p>
+    <ul>
+      <li>Interview company representatives and foreign workers (H-1B, L-1, E-3).</li>
+      <li>Review documents and check work locations.</li>
+      <li>Verify the employer’s existence and accuracy of petition details.</li>
+      <li>Ensure foreign workers are performing duties as approved in their petitions.</li>
+      <li>Speak with HR managers or supervisors to confirm petition terms.</li>
+      <li>Officers might contact client SPOCs as well.</li>
+    </ul>
+
+    <h2>2. What are the documents to be kept handy while the officer visits/calls?</h2>
+    <ul>
+      <li>Petition documents (I-797 copies, LCAs), latest paystubs, W2 forms, HCL ID card, and Client ID card (as applicable).</li>
+    </ul>
+
+    <h2>3. If an FDNS officer visits the home or worksite unannounced and the employee is not available, can we request some time and schedule the next available appointment for the visit or call?</h2>
+    <ul>
+      <li>If an officer visits the home or worksite unannounced and the employee is not available, we can politely request a convenient time for the next visit or call.</li>
+    </ul>
+
+    <h2>4. Do I need to submit an amendment for the client change / Home address change?</h2>
+    <ul>
+      <li>Employee needs to get in touch with the ISG team for evaluation before the change comes in effect. ISG will conduct an analysis and file an amendment, if necessary. You will be eligible to relocate/change the work address after ISG team’s review only.</li>
+    </ul>
+
+    <h2>5. What should be considered as work address?</h2>
+    <ul>
+      <li>The address mentioned in the LCA should be your physical work address and if there is any deviation, you can connect with ISG team for the further review.</li>
+    </ul>
+
+    <h2>6. In case of an audit/site visit, will employee be notified in advance?</h2>
+    <ul>
+      <li>Yes, in some audits, employees will be notified in advance, while others may involve unannounced visits.</li>
+    </ul>
+
+    <h2>7. My residential address is changed do I need to inform the USCIS?</h2>
+    <ul>
+      <li>If you are changing your residence, ensure that it is in the same county as per the work location/residence mentioned in the LCA.</li>
+      <li>If the new address falls in a different county, contact ISG for further review (refer Question 3 also).</li>
+      <li>Upon receiving confirmation from ISG and immediately after moving into the new residence, you need to notify USCIS about your new residential address. Fill out the AR-11 form on the USCIS portal using this <a href="https://www.uscis.gov/ar-11" target="_blank" rel="noopener noreferrer">link</a>, mandatorily, in case of change in residence.</li>
+      <li>Update HCLTech’s ESS portal with your new address.</li>
+    </ul>
+
+    <h2>8. My work address is changed, what needs to be done?</h2>
+    <ul>
+      <li>If the work address has been changed, please connect with ISG before you start your work at the new location. You are not authorized to work in the new location without a review and approval from ISG Team.</li>
+    </ul>
+
+    <h2>9. I do not have a reportee, still receiving the awareness emails.</h2>
+    <ul>
+      <li>The ISG team has sent awareness emails to employees in the E2 band and above, which is why you have received this message. If you do not have any direct reports, please consider this email for your information only.</li>
+    </ul>
+  </div>
+</body>
+</html>
