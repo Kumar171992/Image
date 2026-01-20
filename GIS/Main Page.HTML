@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Anomalies - Correction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        main {
+            max-width: 1600px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-edit {
+            background-color: #f39c12;
+        }
+        .btn-edit:hover {
+            background-color: #e67e22;
+        }
+        .btn-save {
+            background-color: #27ae60;
+        }
+        .btn-save:hover {
+            background-color: #229954;
+        }
+        .btn-cancel {
+            background-color: #95a5a6;
+        }
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+        /* Table header */
+        th.serial-number {
+            text-align: center;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: #34495e;
+        }
+        
+        /* Table body cells */
+        td.serial-number {
+            text-align: center;
+            font-weight: bold;
+            color: #34495e;
+        }     
+        .hidden-column {
+            display: none;
+        }
+
+        /* ===== Calculated Field Styles ===== */
+        .calc-positive {
+            color:#155724 !important;
+            background:#d4edda !important;
+            font-weight:bold;
+        }
+        .calc-negative {
+            color:#721c24 !important;
+            background:#f8d7da !important;
+            font-weight:bold;
+        }
+        .calc-neutral {
+            color:#155724 !important;
+            background:#d4edda !important;
+            font-weight:bold;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 3% auto;
+            padding: 0;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            background-color: #2c3e50;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .modal-body {
+            padding: 30px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-group .value {
+            display: block;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            color: #495057;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"]:disabled,
+        .form-group input[type="date"]:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.2rem rgba(52,152,219,0.25);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-row-triple {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .modal-footer {
+            padding: 15px 30px;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-close {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-close:hover {
+            background-color: #5a6268;
+        }
+
+        .readonly-badge {
+            display: inline-block;
+            background-color: #e9ecef;
+            color: #6c757d;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+
+        .editable-badge {
+            display: inline-block;
+            background-color: #d4edda;
+            color: #155724;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .form-row-triple {
+                grid-template-columns: 1fr;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GIS Anomalies</h1>
+    </header>
+    <main>
+        <h2>GIS Data Correction</h2>
+        
+        @{body('Create_HTML_table')}
+    </main>
+
+    <!-- Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Employee Details</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <div id="editModeButtons" style="display: none;">
+                    <button class="btn-save" onclick="saveEmployee()">Save Changes</button>
+                    <button class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+                </div>
+                <button class="btn-close" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+let currentRow = null;
+let isEditMode = false;
+let originalData = {};
+let allRowData = [];
+
+// Columns to show on main page
+const visibleColumns = [
+    'GIS ID', 'Employee ID', 'Employee Name', 'Destination Country',
+    'RevisedVisaType', 'Current_Status'
+];
+
+// Display names for columns
+const columnDisplayNames = {
+    'RevisedVisaType': 'Visa Type'
+};
+
+// Field configuration
+const fieldConfig = {
+    'GIS ID': { editable: false, type: 'number' },
+    'Employee ID': { editable: false, type: 'number' },
+    'Employee Name': { editable: false, type: 'text' },
+    'GEO': { editable: false, type: 'text' },
+    'Destination Country': { editable: false, type: 'text' },
+    'Source Country': { editable: false, type: 'text' },
+    'RevisedVisaType': { editable: false, type: 'text' },
+    'Visa Sub Type': { editable: false, type: 'text' },
+    'Submitted To ISG': { editable: true, type: 'date' },
+    'Approved By ISG': { editable: true, type: 'date' },
+    'Approved - Submitted': { editable: false, type: 'number', calculated: true },
+    'Government Agency filing date': { editable: true, type: 'date' },
+    'OFC Appointment Date': { editable: true, type: 'date' },
+    'Filing Date': { editable: false, type: 'date', derived: true },
+    'Filling - Approved': { editable: false, type: 'number', calculated: true },
+    'Approved Petition received date': { editable: true, type: 'date' },
+    'WP start - Gov': { editable: false, type: 'number', calculated: true },
+    'Approved Petition Start Date': { editable: true, type: 'date' },
+    'Approved Petition End Date': { editable: true, type: 'date' },
+    'WP Duration Check': { editable: false, type: 'number', calculated: true },
+    'Application Acceptance Date': { editable: true, type: 'date' },
+    'Stamping Submission date': { editable: true, type: 'date' },
+    'Visa Valid from Date': { editable: true, type: 'date' },
+    'Visa Valid till Date': { editable: true, type: 'date' },
+    'Visa Duration Check': { editable: false, type: 'number', calculated: true },
+    'WP_Visa Check': { editable: false, type: 'number', calculated: true },
+    'Current_Status': { editable: false, type: 'text' },
+    'Remarks': { editable: true, type: 'text' },
+    'Note': { editable: false, type: 'text' }
+};
+
+// 🔥 FIXED: Derived date rules
+const derivedDateRules = {
+    'Filing Date': {
+        priorityDates: [
+            'Government Agency filing date',
+            'OFC Appointment Date'
+        ]
+    }
+};
+
+// Date calculation rules
+const dateCalculations = {
+    'Approved - Submitted': {
+        startDate: 'Submitted To ISG',
+        endDate: 'Approved By ISG'
+    },
+    'Filling - Approved': {
+        startDate: 'Approved By ISG',
+        endDate: 'Filing Date'
+    },
+    'WP start - Gov': {
+        startDate: 'Filing Date',
+        endDate: 'Approved Petition Start Date'
+    },
+    'WP Duration Check': {
+        startDate: 'Approved Petition Start Date',
+        endDate: 'Approved Petition End Date'
+    },
+    'Visa Duration Check': {
+        startDate: 'Visa Valid from Date',
+        endDate: 'Visa Valid till Date'
+    },
+    'WP_Visa Check': {
+        startDate: 'Approved Petition Start Date',
+        endDate: 'Visa Valid from Date'
+    }
+};
+
+// Process table on page load
+window.onload = function() {
+    const table = document.querySelector('table');
+    if (!table) return;
+
+    const headerRow = table.querySelector('thead tr') || table.querySelector('tr');
+    const headers = Array.from(headerRow.cells).map(cell => cell.textContent.trim());
+    
+    // Store all row data for modal
+    const rows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
+    rows.forEach(row => {
+        const rowData = {};
+        Array.from(row.cells).forEach((cell, index) => {
+            rowData[headers[index]] = cell.textContent.trim();
+        });
+        allRowData.push(rowData);
+    });
+
+    // Add Serial Number column header
+    const snHeader = document.createElement('th');
+    snHeader.textContent = 'S.No';
+    snHeader.className = 'serial-number';
+    headerRow.insertBefore(snHeader, headerRow.firstChild);
+
+    // Hide unwanted columns in header
+    headers.forEach((header, index) => {
+        if (!visibleColumns.includes(header)) {
+            headerRow.cells[index + 1].classList.add('hidden-column');
+        }
+    });
+
+    // Rename headers if needed
+    headers.forEach((header, index) => {
+        if (columnDisplayNames[header]) {
+            headerRow.cells[index + 1].textContent = columnDisplayNames[header];
+        }
+    });
+
+    // Add Action header
+    if (!headerRow.textContent.includes('Action')) {
+        const actionHeader = document.createElement('th');
+        actionHeader.textContent = 'Action';
+        headerRow.appendChild(actionHeader);
+    }
+
+    // Process each data row
+    rows.forEach((row, rowIndex) => {
+        const snCell = document.createElement('td');
+        snCell.textContent = rowIndex + 1;
+        snCell.className = 'serial-number';
+        row.insertBefore(snCell, row.firstChild);
+
+        headers.forEach((header, index) => {
+            if (!visibleColumns.includes(header)) {
+                row.cells[index + 1].classList.add('hidden-column');
+            }
+        });
+
+        if (row.cells.length === headerRow.cells.length) return;
+        
+        const actionCell = document.createElement('td');
+        const viewButton = document.createElement('button');
+        viewButton.textContent = 'View';
+        viewButton.setAttribute('data-row-index', rowIndex);
+        viewButton.onclick = function() { viewEmployee(this, false); };
+        
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.className = 'btn-edit';
+        editButton.setAttribute('data-row-index', rowIndex);
+        editButton.onclick = function() { viewEmployee(this, true); };
+        
+        actionCell.appendChild(viewButton);
+        actionCell.appendChild(editButton);
+        row.appendChild(actionCell);
+    });
+};
+
+
+// 🔥 FIXED: Date parsing and formatting
+function parseExcelDate(value) {
+    if (!value || value === 'N/A') return null;
+    if (!isNaN(value) && parseInt(value) > 366) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const days = parseInt(value);
+        return new Date(excelEpoch.getTime() + days * 86400000);
+    }
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+}
+
+function formatDate(dateString) {
+    const date = parseExcelDate(dateString);
+    if (!date) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const month = months[date.getMonth()];
+    return `${day}-${month}-${date.getFullYear()}`;
+}
+
+function formatDateForInput(dateString) {
+    const date = parseExcelDate(dateString);
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function calculateDateDifference(endDateValue, startDateValue) {
+    const endDate = parseExcelDate(endDateValue);
+    const startDate = parseExcelDate(startDateValue);
+    if (!endDate || !startDate) return null;
+    const diffTime = endDate - startDate;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// 🔥 FIXED: Derived dates with UI update
+function resolveDerivedDates(rowData) {
+    for (const [field, rule] of Object.entries(derivedDateRules)) {
+        let resolvedValue = '';
+        
+        // 🔥 FIXED: Priority logic - first NON-EMPTY date
+        for (const sourceField of rule.priorityDates) {
+            const value = rowData[sourceField];
+            // ✅ Consider date VALID if it exists and not 'N/A'
+            if (value && value !== 'N/A' && value !== '') {
+                resolvedValue = value;
+                break;  // Use first valid priority date
+            }
+        }
+        
+        // 🔥 NEW: If no valid dates found, set 'N/A'
+        if (!resolvedValue) {
+            resolvedValue = '';
+        }
+        
+        // Only update if changed
+        if (rowData[field] !== resolvedValue) {
+            rowData[field] = resolvedValue;
+        }
+        
+        // Update UI
+        const fieldElement = document.querySelector(`[data-calc-field="${field}"]`);
+        if (fieldElement) {
+            if (resolvedValue && resolvedValue !== 'N/A' && resolvedValue !== '') {
+                fieldElement.textContent = formatDate(resolvedValue);
+                fieldElement.classList.add('calc-positive');
+            } else {
+                fieldElement.textContent = 'N/A';
+                fieldElement.classList.remove('calc-positive', 'calc-negative');
+            }
+        }
+    }
+}
+
+// 🔥 FIXED: Complete calculation engine
+function updateCalculatedFields() {
+    if (!currentRow) return;
+    
+    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+    const rowData = allRowData[rowIndex];
+
+    // 1. Resolve derived dates FIRST (Filing Date)
+    resolveDerivedDates(rowData);
+
+    // 2. Calculate all date differences
+    for (const [calcField, config] of Object.entries(dateCalculations)) {
+        const startValue = rowData[config.startDate];
+        const endValue = rowData[config.endDate];
+        const difference = calculateDateDifference(endValue, startValue);
+        
+        const calcElement = document.querySelector(`[data-calc-field="${calcField}"]`);
+        if (!calcElement) continue;
+
+        // Reset styles
+        calcElement.classList.remove('calc-negative', 'calc-positive', 'calc-neutral');
+        calcElement.innerHTML = '';
+
+        if (difference === null || difference === undefined) {
+            calcElement.textContent = 'N/A';
+            rowData[calcField] = '';
+            continue;
+        }
+
+        calcElement.textContent = difference;
+        rowData[calcField] = difference.toString();
+
+        if (difference >= 0) {
+            calcElement.classList.add('calc-positive');
+            calcElement.innerHTML += ' <span style="font-size: 11px;">(On Time)</span>';
+        } else {
+            calcElement.classList.add('calc-negative');
+            calcElement.innerHTML += ` <span style="font-size: 11px;">(${Math.abs(difference)} days late)</span>`;
+        }
+    }
+}
+
+// 🔥 FIXED: Main modal function with Edit mode calculations
+function viewEmployee(button, editMode = false) {
+    const rowIndex = parseInt(button.getAttribute('data-row-index'));
+    currentRow = button.closest('tr');
+    isEditMode = editMode;
+    
+    const rowData = allRowData[rowIndex];
+    const allHeaders = Object.keys(rowData);
+    
+    originalData = {};
+    let modalContent = '';
+    
+    document.getElementById('modalTitle').textContent = editMode ? 'Edit Employee Details' : 'Employee Details';
+    document.getElementById('editModeButtons').style.display = editMode ? 'block' : 'none';
+    
+    // Basic Information Section
+    modalContent += '<div class="section-title">Basic Information</div>';
+    modalContent += '<div class="form-row">';
+    for (let i = 0; i < Math.min(7, allHeaders.length); i++) {
+        const label = allHeaders[i];
+        const value = rowData[label] || 'N/A';
+        originalData[label] = value;
+        
+        const config = fieldConfig[label] || { editable: false, type: 'text' };
+        const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+        
+        if (editMode && config.editable) {
+            if (config.type === 'date') {
+                const dateValue = formatDateForInput(value);
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <input type="date" id="field-${i}" data-field-name="${label}" value="${dateValue}" data-original="${value}" onchange="handleDateChange('${label}')">
+                    </div>
+                `;
+            } else {
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                    </div>
+                `;
+            }
+        } else {
+            const displayValue = config.type === 'date' ? formatDate(value) : value;
+            modalContent += `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <div class="value">${displayValue}</div>
+                </div>
+            `;
+        }
+    }
+    modalContent += '</div>';
+    
+    // Date Fields Section with Live Calculations
+    if (allHeaders.length > 7) {
+        modalContent += '<div class="section-title">Dates & Timeline</div>';
+        modalContent += '<div class="form-row-triple">';
+        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
+            const label = allHeaders[i];
+            const value = rowData[label] || 'N/A';
+            originalData[label] = value;
+            
+            const config = fieldConfig[label] || { editable: false, type: 'text' };
+            const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+            
+            if (editMode && config.editable) {
+                if (config.type === 'date') {
+                    const dateValue = formatDateForInput(value);
+                    modalContent += `
+                        <div class="form-group">
+                            <label>${label} ${badge}</label>
+                            <input type="date" id="field-${i}" data-field-name="${label}" value="${dateValue}" data-original="${value}" onchange="handleDateChange('${label}')">
+                        </div>
+                    `;
+                } else {
+                    modalContent += `
+                        <div class="form-group">
+                            <label>${label} ${badge}</label>
+                            <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                        </div>
+                    `;
+                }
+            } else {
+                // 🔥 CREATES calculation field elements for BOTH modes
+                let displayValue = config.type === 'date' ? formatDate(value) : value;
+                let valueClass = 'value calc-field';
+                
+                if ((config.calculated || config.derived) && value !== 'N/A' && value !== '') {
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        valueClass += numValue >= 0 ? ' calc-positive' : ' calc-negative';
+                    }
+                }
+                
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <div class="${valueClass}" data-calc-field="${label}">Calculating...</div>
+                    </div>
+                `;
+            }
+        }
+        modalContent += '</div>';
+    }
+    
+    // Status & Notes Section
+    if (allHeaders.length > 25) {
+        modalContent += '<div class="section-title">Status & Notes</div>';
+        modalContent += '<div class="form-row">';
+        for (let i = 25; i < allHeaders.length; i++) {
+            const label = allHeaders[i];
+            const value = rowData[label] || 'N/A';
+            originalData[label] = value;
+            
+            const config = fieldConfig[label] || { editable: false, type: 'text' };
+            const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+            
+            if (editMode && config.editable) {
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                    </div>
+                `;
+            } else {
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <div class="value">${value}</div>
+                    </div>
+                `;
+            }
+        }
+        modalContent += '</div>';
+    }
+    
+    // 🔥 FIXED: Render modal and trigger calculations
+    document.getElementById('modalBody').innerHTML = modalContent;
+    document.getElementById('employeeModal').style.display = 'block';
+    
+    // 🔥 CRITICAL: Initialize calculations AFTER DOM update
+    setTimeout(() => {
+        updateCalculatedFields();
+    }, 50);
+}
+
+// 🔥 FIXED: Date change handler
+function handleDateChange(fieldName) {
+    if (!currentRow) return;
+    
+    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+    const input = document.querySelector(`input[data-field-name="${fieldName}"]`);
+    
+    if (!input) return;
+    
+    // 🔥 FIXED: Handle BOTH filled AND cleared dates
+    const newValue = input.value || '';  // Empty string when cleared
+    allRowData[rowIndex][fieldName] = newValue;
+    
+    // 🔥 CRITICAL: Always recalculate when ANY date changes
+    updateCalculatedFields();
+}
+
+// 🔥 CRITICAL FIELDS TO CHECK FOR NEGATIVE VALUES
+const criticalFields = [
+    'Approved - Submitted',
+    'Filling - Approved', 
+    'WP start - Gov',
+    'WP Duration Check',
+    'Visa Duration Check',
+    'WP_Visa Check'
+];
+
+function saveEmployee() {
+    if (!currentRow) return;
+    
+    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+    
+    // 🔥 STEP 1: Check for NEGATIVE values first
+    const negativeFields = [];
+    criticalFields.forEach(field => {
+        const value = parseFloat(allRowData[rowIndex][field]);
+        if (!isNaN(value) && value < 0) {
+            negativeFields.push(field);
+        }
+    });
+    
+    // 🔥 STEP 2: If negative fields found, show REMARKS DROPDOWN
+    if (negativeFields.length > 0) {
+        showRemarksDropdown(negativeFields, rowIndex);
+        return; // STOP saving until user selects reason
+    }
+    
+    // ✅ No negative fields - proceed with normal save
+    proceedWithSave(rowIndex);
+}
+
+function showRemarksDropdown(negativeFields, rowIndex) {
+    const negativeFieldsList = negativeFields.join(', ');
+    const message = `⚠️ Negative values found in:\n${negativeFieldsList}\n\nPlease select reason in Remarks:`;
+    
+    // 🔥 Create dropdown HTML
+    const dropdownHtml = `
+        <div id="remarksModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:white;padding:30px;border-radius:10px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;">
+                <h3 style="color:#d32f2f;margin-top:0;">${message}</h3>
+                <div style="margin:20px 0;">
+                    <label style="font-weight:bold;display:block;margin-bottom:10px;">Select Reason:</label>
+                    <select id="reasonSelect" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:16px;">
+                        <option value="">-- Select Reason --</option>
+                        <option value="Pre Hire">Pre Hire</option>
+                        <option value="Filed before the case received">Filed before the case received</option>
+                        <option value="others">Others</option>
+                    </select>
+                </div>
+                <div id="othersInput" style="display:none;margin:20px 0;">
+                    <label style="font-weight:bold;display:block;margin-bottom:10px;">Enter details (Max 50 chars):</label>
+                    <input type="text" id="othersText" maxlength="50" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:16px;" placeholder="Enter reason...">
+                    <div style="font-size:12px;color:#666;margin-top:5px;">(<span id="charCount">0</span>/50 characters)</div>
+                </div>
+                <div style="text-align:right;">
+                    <button onclick="cancelRemarks()" style="background:#ccc;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;margin-right:10px;">Cancel</button>
+                    <button onclick="confirmRemarks(${rowIndex})" style="background:#4caf50;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', dropdownHtml);
+    
+    // 🔥 Event listeners for dropdown
+    document.getElementById('reasonSelect').onchange = function() {
+        const othersDiv = document.getElementById('othersInput');
+        const othersInput = document.getElementById('othersText');
+        const charCount = document.getElementById('charCount');
+        
+        if (this.value === 'others') {
+            othersDiv.style.display = 'block';
+            othersInput.focus();
+        } else {
+            othersDiv.style.display = 'none';
+        }
+        
+        // Character counter
+        othersInput.oninput = function() {
+            charCount.textContent = this.value.length;
+        };
+    };
+}
+
+function confirmRemarks(rowIndex) {
+    const select = document.getElementById('reasonSelect');
+    const othersInput = document.getElementById('othersText');
+    let remarksValue = select.value;
+    
+    // 🔥 Handle "Others" with custom text
+    if (remarksValue === 'others') {
+        remarksValue = othersInput.value.trim();
+        if (!remarksValue || remarksValue.length > 50) {
+            alert('Please enter valid reason (1-50 characters)');
+            return;
+        }
+    }
+    
+    if (!remarksValue || remarksValue === '') {
+        alert('Please select a reason');
+        return;
+    }
+    
+    // 🔥 Save remarks and proceed
+    allRowData[rowIndex]['Remarks'] = remarksValue;
+    
+    // Close dropdown modal
+    document.getElementById('remarksModal').remove();
+    
+    // Proceed with save
+    proceedWithSave(rowIndex);
+}
+
+function cancelRemarks() {
+    document.getElementById('remarksModal').remove();
+}
+
+function proceedWithSave(rowIndex) {
+    const inputs = document.querySelectorAll('#modalBody input');
+    const table = currentRow.closest('table');
+    const headerRow = table.querySelector('thead tr') || table.rows[0];
+    const headers = Array.from(headerRow.cells).map(cell => cell.textContent.trim());
+    
+    // Save all inputs
+    inputs.forEach(input => {
+        const fieldName = input.getAttribute('data-field-name');
+        let value = input.type === 'date' ? 
+            (input.value ? formatDate(input.value) : input.getAttribute('data-original')) : 
+            input.value;
+        
+        allRowData[rowIndex][fieldName] = value;
+        
+        const headerIndex = headers.indexOf(fieldName);
+        if (headerIndex !== -1 && !currentRow.cells[headerIndex + 1].classList.contains('hidden-column')) {
+            currentRow.cells[headerIndex + 1].textContent = value;
+        }
+    });
+    
+    alert('✅ Changes saved successfully!\n📝 Remarks added for negative values.');
+    closeModal();
+}
+
+function cancelEdit() {
+    closeModal();
+}
+
+function closeModal() {
+    document.getElementById('employeeModal').style.display = 'none';
+    currentRow = null;
+    isEditMode = false;
+    originalData = {};
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('employeeModal');
+    if (event.target === modal) closeModal();
+};
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
