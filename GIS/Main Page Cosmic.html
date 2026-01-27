@@ -41,8 +41,9 @@
             background-color: #34495e;
             color: white;
             padding: 12px;
-            text-align: left;
+            text-align: center;
             font-weight: bold;
+            font-size: 13px;
         }
         td {
             padding: 12px;
@@ -319,11 +320,197 @@
                 margin: 5% auto;
             }
         }
+
+        /* Table */
+        table {
+            font-size: 12.5px;
+        }
+
+        /* Table header */
+        th {
+            font-size: 13px;
+        }
+
+        /* Table body */
+        td {
+            font-size: 12.5px;
+        }
+
+        /* ===== User Info (Top Right) ===== */
+        header {
+            position: relative;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            text-align: left;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .login-time {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        /* Responsive handling */
+        @media (max-width: 768px) {
+            .user-info {
+                position: static;
+                margin-top: 10px;
+                text-align: center;
+            }
+        }    
+        
+        /* Prevent table flash on initial load */
+        .table-hidden {
+            visibility: hidden;
+        }
+        
+.dates-timeline-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+
+.dates-column-left,
+.dates-column-right {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-row-single {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.form-row-dual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-row-triple {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+}
+
+/* Optional: Add visual separator between columns */
+.dates-column-left {
+    padding-right: 20px;
+    border-right: 1px solid #e0e0e0;
+}
+
+.dates-column-right {
+    padding-left: 10px;
+} 
+
+/* Basic Information Layout */
+.form-row-single {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-row-triple {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* Make labels consistent and clear */
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-group .value {
+    padding: 10px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"] {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    min-height: 40px;
+}
+
+/* Badge styling */
+.editable-badge {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.readonly-badge {
+    background-color: #f5f5f5;
+    color: #757575;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Section title */
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+}
     </style>
 </head>
 <body>
     <header>
         <h1>GIS Anomalies</h1>
+
+            <div class="user-info">
+                <div class="user-name">
+                    @{first(outputs('Compose_2'))}
+                </div>
+                <div class="login-time" id="loginTime">
+                    <!-- JS will populate date & time -->
+                </div>
+            </div>        
+
     </header>
     <main>
         <h2>GIS Data Correction</h2>
@@ -352,10 +539,54 @@
     </div>
 
 <script>
+let modalContent = '';
+let currentRowIndex = -1;
+    
 let currentRow = null;
 let isEditMode = false;
 let originalData = {};
 let allRowData = [];
+let remarksConfirmed = false;
+
+    const now = new Date();
+    const formatted =
+        now.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        }) + ' ' +
+        now.toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+    document.getElementById('loginTime').textContent = formatted;
+
+let Username = '';
+
+// Set login date & time when page loads
+document.addEventListener('DOMContentLoaded', function () {
+    const now = new Date();
+
+    const formattedDateTime =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear() + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+
+    const loginTimeEl = document.getElementById('loginTime');
+    if (loginTimeEl) {
+        loginTimeEl.textContent = `Logged in: ${formattedDateTime}`;
+    }
+
+    // ✅ ADD THIS PART
+    const userEl = document.querySelector('.user-name');
+    if (userEl) {
+        Username = userEl.textContent.trim();
+    }
+});
+
 
 // Columns to show on main page
 const visibleColumns = [
@@ -386,19 +617,19 @@ const fieldConfig = {
     'OFC Appointment Date': { editable: true, type: 'date' },
     'Filing Date': { editable: false, type: 'date', derived: true },
     'Filling - Approved': { editable: false, type: 'number', calculated: true },
-    'Approved Petition received date': { editable: true, type: 'date' },
+
     'WP start - Gov': { editable: false, type: 'number', calculated: true },
     'Approved Petition Start Date': { editable: true, type: 'date' },
     'Approved Petition End Date': { editable: true, type: 'date' },
     'WP Duration Check': { editable: false, type: 'number', calculated: true },
-    'Application Acceptance Date': { editable: true, type: 'date' },
-    'Stamping Submission date': { editable: true, type: 'date' },
+
+
     'Visa Valid from Date': { editable: true, type: 'date' },
     'Visa Valid till Date': { editable: true, type: 'date' },
     'Visa Duration Check': { editable: false, type: 'number', calculated: true },
     'WP_Visa Check': { editable: false, type: 'number', calculated: true },
     'Current_Status': { editable: false, type: 'text' },
-    'Remarks': { editable: true, type: 'text' },
+    'Remarks': { editable: false, type: 'text' },
     'Note': { editable: false, type: 'text' },
     'Completed On': { editable: false, type: 'text' },
 };
@@ -441,10 +672,29 @@ const dateCalculations = {
     }
 };
 
+function formatExcelSerialToDisplay(value) {
+    if (!value || value === 'N/A') return '';
+
+    // If already formatted, return as-is
+    if (isNaN(value)) return value;
+
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + Number(value) * 86400000);
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const month = months[date.getMonth()];
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${day}-${month}-${year}`;
+}
+
 // Process table on page load
 window.onload = function() {
     const table = document.querySelector('table');
     if (!table) return;
+
+    
 
     const headerRow = table.querySelector('thead tr') || table.querySelector('tr');
     const headers = Array.from(headerRow.cells).map(cell => cell.textContent.trim());
@@ -453,9 +703,17 @@ window.onload = function() {
     const rows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
     rows.forEach(row => {
         const rowData = {};
-        Array.from(row.cells).forEach((cell, index) => {
-            rowData[headers[index]] = cell.textContent.trim();
-        });
+            Array.from(row.cells).forEach((cell, index) => {
+                let value = cell.textContent.trim();
+
+                // 🔥 FORMAT "Completed On" FOR MAIN TABLE DISPLAY
+                if (headers[index] === 'Completed On') {
+                    value = formatExcelSerialToDisplay(value);
+                    cell.textContent = value; // update UI cell
+                }
+
+                rowData[headers[index]] = value;
+            });
         allRowData.push(rowData);
     });
 
@@ -550,12 +808,96 @@ function formatDateForInput(dateString) {
     return `${year}-${month}-${day}`;
 }
 
-function calculateDateDifference(endDateValue, startDateValue) {
-    const endDate = parseExcelDate(endDateValue);
-    const startDate = parseExcelDate(startDateValue);
-    if (!endDate || !startDate) return null;
-    const diffTime = endDate - startDate;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+// 🔥 Enhanced date difference calculation
+function calculateDateDifference(endDateStr, startDateStr) {
+    console.log(`   📐 calculateDateDifference(end: ${endDateStr}, start: ${startDateStr})`);
+    
+    if (!endDateStr || !startDateStr || endDateStr === 'N/A' || startDateStr === 'N/A') {
+        console.log(`   ⚠️ Invalid input dates`);
+        return null;
+    }
+
+    // Parse dates
+    const endDate = parseDate(endDateStr);
+    const startDate = parseDate(startDateStr);
+
+    if (!endDate || !startDate || isNaN(endDate.getTime()) || isNaN(startDate.getTime())) {
+        console.log(`   ⚠️ Failed to parse dates`);
+        console.log(`   End parsed: ${endDate}`);
+        console.log(`   Start parsed: ${startDate}`);
+        return null;
+    }
+
+    // Calculate difference in days
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    console.log(`   📊 Result: ${diffDays} days`);
+    return diffDays;
+}
+
+
+// 🔥 Enhanced date parser to handle multiple formats
+function parseDate(dateStr) {
+    if (!dateStr || dateStr === 'N/A' || dateStr === '') return null;
+    
+    // Clean the string
+    dateStr = dateStr.trim();
+    
+    // Try parsing as ISO format (YYYY-MM-DD) - from date input
+    let date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+        console.log(`   ✅ Parsed as ISO: ${date.toISOString()}`);
+        return date;
+    }
+    
+    // Try parsing DD/MM/YYYY format (your display format)
+    const ddmmyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (ddmmyyyy) {
+        const [, day, month, year] = ddmmyyyy;
+        date = new Date(year, month - 1, day);
+        if (!isNaN(date.getTime())) {
+            console.log(`   ✅ Parsed as DD/MM/YYYY: ${date.toISOString()}`);
+            return date;
+        }
+    }
+    
+    // Try parsing DD-Mon-YYYY format (07-Oct-2025)
+    const ddmonyyyy = dateStr.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+    if (ddmonyyyy) {
+        const [, day, monthStr, year] = ddmonyyyy;
+        const months = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+        const month = months[monthStr];
+        if (month !== undefined) {
+            date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) {
+                console.log(`   ✅ Parsed as DD-Mon-YYYY: ${date.toISOString()}`);
+                return date;
+            }
+        }
+    }
+    
+    console.log(`   ❌ Failed to parse: ${dateStr}`);
+    return null;
+}
+
+// Make sure this is called when dates change
+function handleDateChange(fieldName) {
+    console.log(`📅 Date changed: ${fieldName}`);
+    
+    // Update the rowData immediately
+    const input = document.querySelector(`input[data-field-name="${fieldName}"]`);
+    if (input && currentRow) {
+        const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+        allRowData[rowIndex][fieldName] = input.value;
+        console.log(`   Updated ${fieldName} to: ${input.value}`);
+    }
+    
+    // Recalculate
+    updateCalculatedFields();
 }
 
 // 🔥 FIXED: Derived dates with UI update
@@ -598,49 +940,88 @@ function resolveDerivedDates(rowData) {
 }
 
 // 🔥 FIXED: Complete calculation engine
+// 🔥 FIXED: Complete calculation engine
 function updateCalculatedFields() {
     if (!currentRow) return;
     
     const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
     const rowData = allRowData[rowIndex];
 
+    console.log('🔍 Starting calculations for row:', rowIndex);
+
+    // 🔥 HARD RESET all calculated + derived fields
+    Object.keys(dateCalculations).forEach(field => {
+        rowData[field] = '';
+    });  
+
     // 1. Resolve derived dates FIRST (Filing Date)
     resolveDerivedDates(rowData);
 
     // 2. Calculate all date differences
     for (const [calcField, config] of Object.entries(dateCalculations)) {
+        console.log(`\n🧮 Calculating: ${calcField}`);
+        
         const startValue = rowData[config.startDate];
         const endValue = rowData[config.endDate];
-        const difference = calculateDateDifference(endValue, startValue);
+        
+        console.log(`   Start (${config.startDate}): ${startValue}`);
+        console.log(`   End (${config.endDate}): ${endValue}`);
         
         const calcElement = document.querySelector(`[data-calc-field="${calcField}"]`);
-        if (!calcElement) continue;
+        if (!calcElement) {
+            console.log(`   ⚠️ Element not found for ${calcField}`);
+            continue;
+        }
 
         // Reset styles
         calcElement.classList.remove('calc-negative', 'calc-positive', 'calc-neutral');
         calcElement.innerHTML = '';
 
-        if (difference === null || difference === undefined) {
+        // Skip if either date is missing
+        if (!startValue || !endValue || startValue === 'N/A' || endValue === 'N/A' || startValue === '' || endValue === '') {
+            console.log(`   ⚠️ Missing dates, skipping calculation`);
+            calcElement.textContent = 'N/A';
+            rowData[calcField] = '';
+            continue;
+        }
+        
+        const difference = calculateDateDifference(endValue, startValue);
+        console.log(`   ✅ Difference: ${difference}`);
+
+        if (difference === null || difference === undefined || isNaN(difference)) {
             calcElement.textContent = 'N/A';
             rowData[calcField] = '';
             continue;
         }
 
-        calcElement.textContent = difference;
+        // Store the raw number
         rowData[calcField] = difference.toString();
-
+        
+        // Display with appropriate styling
+        const absValue = Math.abs(difference);
+        
         if (difference >= 0) {
             calcElement.classList.add('calc-positive');
-            calcElement.innerHTML += ' <span style="font-size: 11px;">(On Time)</span>';
+            calcElement.innerHTML = `
+                <span class="calc-number">${difference}</span>
+                <span class="calc-label">(On Time)</span>
+            `;
         } else {
             calcElement.classList.add('calc-negative');
-            calcElement.innerHTML += ` <span style="font-size: 11px;">(${Math.abs(difference)} days late)</span>`;
+            calcElement.innerHTML = `
+                <span class="calc-number">${difference}</span>
+                <span class="calc-label">(${absValue} days late)</span>
+            `;
         }
     }
+    
+    console.log('✅ Calculations complete');
 }
+
 
 // 🔥 FIXED: Main modal function with Edit mode calculations
 function viewEmployee(button, editMode = false) {
+    remarksConfirmed = false;
     const rowIndex = parseInt(button.getAttribute('data-row-index'));
     currentRow = button.closest('tr');
     isEditMode = editMode;
@@ -655,52 +1036,33 @@ function viewEmployee(button, editMode = false) {
     document.getElementById('editModeButtons').style.display = editMode ? 'block' : 'none';
     
     // Basic Information Section
-    modalContent += '<div class="section-title">Basic Information</div>';
-    modalContent += '<div class="form-row">';
-    for (let i = 0; i < Math.min(7, allHeaders.length); i++) {
-        const label = allHeaders[i];
-        const value = rowData[label] || 'N/A';
-        originalData[label] = value;
-        
-        const config = fieldConfig[label] || { editable: false, type: 'text' };
-        const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
-        
-        if (editMode && config.editable) {
-            if (config.type === 'date') {
-                const dateValue = formatDateForInput(value);
-                modalContent += `
-                    <div class="form-group">
-                        <label>${label} ${badge}</label>
-                        <input type="date" id="field-${i}" data-field-name="${label}" value="${dateValue}" data-original="${value}" onchange="handleDateChange('${label}')">
-                    </div>
-                `;
-            } else {
-                modalContent += `
-                    <div class="form-group">
-                        <label>${label} ${badge}</label>
-                        <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
-                    </div>
-                `;
-            }
-        } else {
-            const displayValue = config.type === 'date' ? formatDate(value) : value;
-            modalContent += `
-                <div class="form-group">
-                    <label>${label} ${badge}</label>
-                    <div class="value">${displayValue}</div>
-                </div>
-            `;
-        }
-    }
-    modalContent += '</div>';
+// Basic Information Section with Employee Name in Title
+const employeeNameIndex = allHeaders.indexOf('Employee Name');
+const employeeName = employeeNameIndex !== -1 ? (rowData['Employee Name'] || 'N/A') : 'N/A';
+
+modalContent += `<div class="section-title">Basic Information of ${employeeName}</div>`;
+
+// Define the field structure (excluding Employee Name)
+const basicInfoStructure = [
+    { fields: ['GIS ID', 'Employee Code', 'Destination Country'], layout: 'triple' },  // Row 1: 3 fields
+    { fields: ['Source Country', 'Visa Type', 'Visa Sub Type'], layout: 'triple' }     // Row 2: 3 fields
+];
+
+// Render each row according to the structure
+basicInfoStructure.forEach((row, rowIndex) => {
+    modalContent += `<div class="form-row-${row.layout}">`;
     
-    // Date Fields Section with Live Calculations
-    if (allHeaders.length > 7) {
-        modalContent += '<div class="section-title">Dates & Timeline</div>';
-        modalContent += '<div class="form-row-triple">';
-        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
-            const label = allHeaders[i];
+    row.fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        
+        if (i !== -1 && i < 7) {  // Ensure it's within basic info range
             const value = rowData[label] || 'N/A';
+            
+            // Clean broken Excel dates on load
+            if (typeof value === 'string' && value.startsWith('+')) {
+                rowData[label] = '';
+            }
+            
             originalData[label] = value;
             
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -724,35 +1086,190 @@ function viewEmployee(button, editMode = false) {
                     `;
                 }
             } else {
-                // 🔥 CREATES calculation field elements for BOTH modes
-                let displayValue = config.type === 'date' ? formatDate(value) : value;
-                let valueClass = 'value calc-field';
-                
-                if ((config.calculated || config.derived) && value !== 'N/A' && value !== '') {
-                    const numValue = parseFloat(value);
-                    if (!isNaN(numValue)) {
-                        valueClass += numValue >= 0 ? ' calc-positive' : ' calc-negative';
-                    }
-                }
-                
+                const displayValue = config.type === 'date' ? formatDate(value) : value;
                 modalContent += `
                     <div class="form-group">
                         <label>${label} ${badge}</label>
-                        <div class="${valueClass}" data-calc-field="${label}">Calculating...</div>
+                        <div class="value">${displayValue}</div>
                     </div>
                 `;
             }
         }
-        modalContent += '</div>';
+    });
+    
+    modalContent += '</div>';
+});
+    
+// Date Fields Section with Live Calculations
+if (allHeaders.length > 7) {
+    modalContent += '<div class="section-title">Dates & Timeline</div>';
+    
+    // Create two-column layout container
+    modalContent += '<div class="dates-timeline-container">';
+    
+    // LEFT COLUMN
+    modalContent += '<div class="dates-column-left">';
+    
+    // Row 1: Submitted To ISG | Approved By ISG
+    modalContent += '<div class="form-row-dual">';
+    const leftCol1Fields = ['Submitted To ISG', 'Approved By ISG'];
+    leftCol1Fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        if (i !== -1) {
+            modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+        }
+    });
+    modalContent += '</div>';
+    
+    // Row 2: Government Agency filing date | OFC Appointment Date | Filing Date
+    modalContent += '<div class="form-row-triple">';
+    const leftCol2Fields = ['Government Agency filing date', 'OFC Appointment Date', 'Filing Date'];
+    leftCol2Fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        if (i !== -1) {
+            modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+        }
+    });
+    modalContent += '</div>';
+    
+    // Row 3: Approved Petition Start Date | Approved Petition End Date
+    modalContent += '<div class="form-row-dual">';
+    const leftCol3Fields = ['Approved Petition Start Date', 'Approved Petition End Date'];
+    leftCol3Fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        if (i !== -1) {
+            modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+        }
+    });
+    modalContent += '</div>';
+    
+    // Row 4: Visa Valid from Date | Visa Valid till Date
+    modalContent += '<div class="form-row-dual">';
+    const leftCol4Fields = ['Visa Valid from Date', 'Visa Valid till Date'];
+    leftCol4Fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        if (i !== -1) {
+            modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+        }
+    });
+    modalContent += '</div>';
+    
+    modalContent += '</div>'; // End left column
+    
+    // RIGHT COLUMN
+    modalContent += '<div class="dates-column-right">';
+    
+    // Row 1: Approved - Submitted
+    modalContent += '<div class="form-row-single">';
+    const rightCol1Field = 'Approved - Submitted';
+    const i1 = allHeaders.indexOf(rightCol1Field);
+    if (i1 !== -1) {
+        modalContent += renderDateField(i1, rightCol1Field, rowData, fieldConfig, editMode, originalData);
+    }
+    modalContent += '</div>';
+    
+    // Row 2: Filling - Approved | WP start - Gov
+    modalContent += '<div class="form-row-dual">';
+    const rightCol2Fields = ['Filling - Approved', 'WP start - Gov'];
+    rightCol2Fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        if (i !== -1) {
+            modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+        }
+    });
+    modalContent += '</div>';
+    
+    // Row 3: WP Duration Check
+    modalContent += '<div class="form-row-single">';
+    const rightCol3Field = 'WP Duration Check';
+    const i3 = allHeaders.indexOf(rightCol3Field);
+    if (i3 !== -1) {
+        modalContent += renderDateField(i3, rightCol3Field, rowData, fieldConfig, editMode, originalData);
+    }
+    modalContent += '</div>';
+    
+    // Row 4: WP_Visa Check | Visa Duration Check
+    modalContent += '<div class="form-row-dual">';
+    const rightCol4Fields = ['WP_Visa Check', 'Visa Duration Check'];
+    rightCol4Fields.forEach(label => {
+        const i = allHeaders.indexOf(label);
+        if (i !== -1) {
+            modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+        }
+    });
+    modalContent += '</div>';
+    
+    modalContent += '</div>'; // End right column
+    
+    modalContent += '</div>'; // End dates-timeline-container
+}
+
+// Helper function to render individual date fields
+function renderDateField(i, label, rowData, fieldConfig, editMode, originalData) {
+    const value = rowData[label] || 'N/A';
+    
+    // Clean broken Excel dates on load
+    if (typeof value === 'string' && value.startsWith('+')) {
+        rowData[label] = '';
     }
     
+    originalData[label] = value;
+    
+    const config = fieldConfig[label] || { editable: false, type: 'text' };
+    const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+    
+    let fieldHTML = '';
+    
+    if (editMode && config.editable) {
+        if (config.type === 'date') {
+            const dateValue = formatDateForInput(value);
+            fieldHTML = `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <input type="date" id="field-${i}" data-field-name="${label}" value="${dateValue}" data-original="${value}" onchange="handleDateChange('${label}')">
+                </div>
+            `;
+        } else {
+            fieldHTML = `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                </div>
+            `;
+        }
+    } else {
+        let displayValue = config.type === 'date' ? formatDate(value) : value;
+        let valueClass = 'value calc-field';
+        
+        if ((config.calculated || config.derived) && value !== 'N/A' && value !== '') {
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue)) {
+                valueClass += numValue >= 0 ? ' calc-positive' : ' calc-negative';
+            }
+        }
+        
+        fieldHTML = `
+            <div class="form-group">
+                <label>${label} ${badge}</label>
+                <div class="${valueClass}" data-calc-field="${label}">Calculating...</div>
+            </div>
+        `;
+    }
+    
+    return fieldHTML;
+}
+    
     // Status & Notes Section
-    if (allHeaders.length > 25) {
+    if (allHeaders.length > 22) {
         modalContent += '<div class="section-title">Status & Notes</div>';
         modalContent += '<div class="form-row">';
-        for (let i = 25; i < allHeaders.length; i++) {
+        for (let i = 22; i < allHeaders.length; i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
+            // 🔥 CLEAN broken Excel dates on load
+            if (typeof value === 'string' && value.startsWith('+')) {
+                rowData[label] = '';
+            }            
             originalData[label] = value;
             
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -787,23 +1304,6 @@ function viewEmployee(button, editMode = false) {
     }, 50);
 }
 
-// 🔥 FIXED: Date change handler
-function handleDateChange(fieldName) {
-    if (!currentRow) return;
-    
-    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
-    const input = document.querySelector(`input[data-field-name="${fieldName}"]`);
-    
-    if (!input) return;
-    
-    // 🔥 FIXED: Handle BOTH filled AND cleared dates
-    const newValue = input.value || '';  // Empty string when cleared
-    allRowData[rowIndex][fieldName] = newValue;
-    
-    // 🔥 CRITICAL: Always recalculate when ANY date changes
-    updateCalculatedFields();
-}
-
 // 🔥 CRITICAL FIELDS TO CHECK FOR NEGATIVE VALUES
 const criticalFields = [
     'Approved - Submitted',
@@ -816,26 +1316,51 @@ const criticalFields = [
 
 function saveEmployee() {
     if (!currentRow) return;
-    
-    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
-    
-    // 🔥 STEP 1: Check for NEGATIVE values first
-    const negativeFields = [];
-    criticalFields.forEach(field => {
-        const value = parseFloat(allRowData[rowIndex][field]);
-        if (!isNaN(value) && value < 0) {
-            negativeFields.push(field);
+
+    const rowIndex = parseInt(
+        currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index')
+    );
+
+    const remarks = normalizeValue(allRowData[rowIndex]['Remarks']);
+
+    // 🔍 Detect negative values
+    const negativeFields = criticalFields.filter(field => {
+        const v = Number(allRowData[rowIndex][field]);
+        return !isNaN(v) && v < 0;
+    });
+
+    const hasNegative = negativeFields.length > 0;
+
+    // 🔴 CASE 1: Negative → remarks required
+    if (hasNegative && (!remarksConfirmed || !remarks || remarks.length < 3)) {
+        showRemarksDropdown(negativeFields, rowIndex);
+        return;
+    }
+
+    // 🟢 CASE 2: No negative → auto remarks
+    if (!hasNegative && !remarks) {
+        allRowData[rowIndex]['Remarks'] = 'Negative Value Corrected';
+    }
+
+    // ✅ Set Completed On ONCE
+    const now = new Date();
+    allRowData[rowIndex]['Completed On'] =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+        // 🔍 DEBUG: Log final payload sent to Power Automate
+        console.log(
+            'FINAL PAYLOAD:',
+            buildExcelPayload(allRowData[rowIndex])
+        );        
+
+    // ✅ SINGLE backend call
+    sendUpdateToServer(allRowData[rowIndex]).then(success => {
+        if (success) {
+            proceedWithSave(rowIndex);
         }
     });
-    
-    // 🔥 STEP 2: If negative fields found, show REMARKS DROPDOWN
-    if (negativeFields.length > 0) {
-        showRemarksDropdown(negativeFields, rowIndex);
-        return; // STOP saving until user selects reason
-    }
-    
-    // ✅ No negative fields - proceed with normal save
-    proceedWithSave(rowIndex);
 }
 
 function showRemarksDropdown(negativeFields, rowIndex) {
@@ -912,6 +1437,9 @@ function confirmRemarks(rowIndex) {
     
     // 🔥 STEP 1: Save remarks to data
     allRowData[rowIndex]['Remarks'] = remarksValue;
+
+    // ✅ MARK remarks as confirmed
+    remarksConfirmed = true;
     
     // 🔥 STEP 2: CLOSE DROPDOWN ONLY (don't proceed with full save)
     document.getElementById('remarksModal').remove();
@@ -973,7 +1501,7 @@ function reopenEditModalWithRemarks(rowIndex, remarksValue) {
     if (allHeaders.length > 7) {
         modalContent += '<div class="section-title">Dates & Timeline</div>';
         modalContent += '<div class="form-row-triple">';
-        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
+        for (let i = 7; i < Math.min(22, allHeaders.length); i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -1027,14 +1555,18 @@ function reopenEditModalWithRemarks(rowIndex, remarksValue) {
             modalContent += `
                 <div class="form-group">
                     <label>Remarks <span class="editable-badge">Editable</span></label>
-                    <input type="text" id="field-remarks" data-field-name="Remarks" value="${remarksValue}" style="border: 2px solid #4caf50; background: #e8f5e8;">
+                    <input type="text" id="field-remarks"
+                    data-field-name="Remarks"
+                    value="${remarksValue}"
+                    readonly
+                    style="border: 2px solid #4caf50; background: #e8f5e8; cursor:not-allowed;">
                 </div>
             `;
             continue;
         }
         
         // Skip fields already shown in Basic/Dates sections
-        if (i < 25) continue;
+        if (i < 22) continue;
         
         const value = rowData[label] || 'N/A';
         const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -1076,20 +1608,175 @@ function cancelRemarks() {
 
 function proceedWithSave(rowIndex) {
     const inputs = document.querySelectorAll('#modalBody input');
-    
-    // Save ALL inputs including Remarks field
+
     inputs.forEach(input => {
         const fieldName = input.getAttribute('data-field-name');
-        let value = input.type === 'date' ? 
-            (input.value ? formatDate(input.value) : input.getAttribute('data-original')) : 
-            input.value;
-        
+        let value = input.type === 'date'
+            ? (input.value ? formatDate(input.value) : input.getAttribute('data-original'))
+            : input.value;
+
         allRowData[rowIndex][fieldName] = value;
     });
-    
-    
-    alert('✅ All changes saved including Remarks!');
+
+    // ✅ SET Completed on (FINAL SAVE ONLY)
+    const now = new Date();
+    const completedOn =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+    allRowData[rowIndex]['Completed On'] = completedOn;
+
+    // ✅ UPDATE MAIN TABLE UI
+    const row = currentRow;
+    const headers = Array.from(row.closest('table').querySelectorAll('th'))
+        .map(th => th.textContent.trim());
+
+    headers.forEach((header, index) => {
+        if (header === 'Remarks') {
+            row.cells[index].textContent = allRowData[rowIndex]['Remarks'];
+        }
+        if (header === 'Completed On') {
+            row.cells[index].textContent = completedOn;
+        }
+    });
+
+    // ✅ RESET STATE
+    remarksConfirmed = false;
+
+   // alert('✅ Saved successfully. Remarks & Completed On updated.');
     closeModal();
+}
+
+function hasNegativeValues(rowIndex) {
+    return criticalFields.some(field => {
+        const value = parseFloat(allRowData[rowIndex][field]);
+        return !isNaN(value) && value < 0;
+    });
+}
+
+function normalizeNumber(value) {
+    if (value === null || value === undefined) return '';
+    if (value === '' || value === 'N/A') return '';
+
+    const num = Number(value);
+    return isNaN(num) ? '' : num;
+}
+
+function sendUpdateToServer(rowData) {
+    const payload = buildExcelPayload(rowData);
+
+    return fetch(
+        'https://default189de737c93a4f5a8b686f4ca99419.12.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/88f0f304876743249179c36c028d9a6f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rxP7fmm-rptgh5Vu2T83MnliCg_ZUS_H8HkI9_fyd0A',
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }
+    )
+    .then(res => {
+        if (!res.ok) throw new Error('Excel update failed');
+
+        // Power Automate often returns 202/204 with no body
+        return true;
+    })
+    .then(() => {
+        console.log('Excel updated successfully');
+        return true;
+    })
+    .catch(err => {
+        console.error('HTTP Error:', err);
+        alert('❌ Failed to save data to Excel. Please try again.');
+        return false;
+    });
+}
+
+function toISODate(value) {
+    if (value === null || value === undefined) return '';
+
+    // 🔹 Handle string inputs
+    if (typeof value === 'string') {
+        const v = value.trim();
+
+        // Reject placeholders and corrupted values
+        if (
+            v === '' ||
+            v.toLowerCase() === 'n/a' ||
+            v.toLowerCase() === 'mm/dd/yyyy' ||
+            v.startsWith('+')
+        ) {
+            return '';
+        }
+
+        // Already ISO yyyy-mm-dd → return as-is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+            return v;
+        }
+
+        // Numeric string → treat as Excel serial
+        if (!isNaN(v)) {
+            value = Number(v);
+        }
+    }
+
+    // 🔹 Handle Excel serial numbers (THIS FIXES YOUR ISSUE)
+    if (typeof value === 'number' && value > 30000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + value * 86400000);
+
+        if (isNaN(date.getTime())) return '';
+
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // 🔹 Normal date handling (NO UTC conversion)
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+
+    // Block insane years
+    if (d.getFullYear() < 1900 || d.getFullYear() > 2100) return '';
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeValue(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') {
+        const v = value.trim();
+        if (v === '' || v.toUpperCase() === 'N/A') return '';
+        return v;
+    }
+    return value;
+}
+
+function buildExcelPayload(rowData) {
+    return {
+        "GIS ID": rowData["GIS ID"],
+
+        // 🔹 DATE FIELDS (ONLY WHAT FLOW EXPECTS)
+        "Submitted To ISG": toISODate(rowData["Submitted To ISG"]),
+        "Approved By ISG": toISODate(rowData["Approved By ISG"]),
+        "Government Agency filing date": toISODate(rowData["Government Agency filing date"]),
+        "OFC Appointment Date": toISODate(rowData["OFC Appointment Date"]),
+        "Approved Petition Start Date": toISODate(rowData["Approved Petition Start Date"]),
+        "Approved Petition End Date": toISODate(rowData["Approved Petition End Date"]),
+        "Visa Valid from Date": toISODate(rowData["Visa Valid from Date"]),
+        "Visa Valid till Date": toISODate(rowData["Visa Valid till Date"]),
+        "Completed On": toISODate(rowData["Completed On"]),
+
+        // 🔹 TEXT FIELDS
+        "Remarks": normalizeValue(rowData["Remarks"]),
+        
+        "SPOC Name": Username
+    };
 }
 
 function cancelEdit() {

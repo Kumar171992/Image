@@ -41,8 +41,9 @@
             background-color: #34495e;
             color: white;
             padding: 12px;
-            text-align: left;
+            text-align: center;
             font-weight: bold;
+            font-size: 13px;
         }
         td {
             padding: 12px;
@@ -319,11 +320,76 @@
                 margin: 5% auto;
             }
         }
+
+        /* Table */
+        table {
+            font-size: 12.5px;
+        }
+
+        /* Table header */
+        th {
+            font-size: 13px;
+        }
+
+        /* Table body */
+        td {
+            font-size: 12.5px;
+        }
+
+        /* ===== User Info (Top Right) ===== */
+        header {
+            position: relative;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            text-align: left;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .login-time {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        /* Responsive handling */
+        @media (max-width: 768px) {
+            .user-info {
+                position: static;
+                margin-top: 10px;
+                text-align: center;
+            }
+        }    
+        
+        /* Prevent table flash on initial load */
+        .table-hidden {
+            visibility: hidden;
+        }        
     </style>
 </head>
 <body>
     <header>
         <h1>GIS Anomalies</h1>
+
+            <div class="user-info">
+                <div class="user-name">
+                    @{first(outputs('Compose_2'))}
+                </div>
+                <div class="login-time" id="loginTime">
+                    <!-- JS will populate date & time -->
+                </div>
+            </div>        
+
     </header>
     <main>
         <h2>GIS Data Correction</h2>
@@ -356,6 +422,47 @@ let currentRow = null;
 let isEditMode = false;
 let originalData = {};
 let allRowData = [];
+let remarksConfirmed = false;
+
+    const now = new Date();
+    const formatted =
+        now.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        }) + ' ' +
+        now.toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+    document.getElementById('loginTime').textContent = formatted;
+
+let Username = '';
+
+// Set login date & time when page loads
+document.addEventListener('DOMContentLoaded', function () {
+    const now = new Date();
+
+    const formattedDateTime =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear() + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+
+    const loginTimeEl = document.getElementById('loginTime');
+    if (loginTimeEl) {
+        loginTimeEl.textContent = `Logged in: ${formattedDateTime}`;
+    }
+
+    // ✅ ADD THIS PART
+    const userEl = document.querySelector('.user-name');
+    if (userEl) {
+        Username = userEl.textContent.trim();
+    }
+});
+
 
 // Columns to show on main page
 const visibleColumns = [
@@ -386,19 +493,19 @@ const fieldConfig = {
     'OFC Appointment Date': { editable: true, type: 'date' },
     'Filing Date': { editable: false, type: 'date', derived: true },
     'Filling - Approved': { editable: false, type: 'number', calculated: true },
-    'Approved Petition received date': { editable: true, type: 'date' },
+
     'WP start - Gov': { editable: false, type: 'number', calculated: true },
     'Approved Petition Start Date': { editable: true, type: 'date' },
     'Approved Petition End Date': { editable: true, type: 'date' },
     'WP Duration Check': { editable: false, type: 'number', calculated: true },
-    'Application Acceptance Date': { editable: true, type: 'date' },
-    'Stamping Submission date': { editable: true, type: 'date' },
+
+
     'Visa Valid from Date': { editable: true, type: 'date' },
     'Visa Valid till Date': { editable: true, type: 'date' },
     'Visa Duration Check': { editable: false, type: 'number', calculated: true },
     'WP_Visa Check': { editable: false, type: 'number', calculated: true },
     'Current_Status': { editable: false, type: 'text' },
-    'Remarks': { editable: true, type: 'text' },
+    'Remarks': { editable: false, type: 'text' },
     'Note': { editable: false, type: 'text' },
     'Completed On': { editable: false, type: 'text' },
 };
@@ -441,10 +548,29 @@ const dateCalculations = {
     }
 };
 
+function formatExcelSerialToDisplay(value) {
+    if (!value || value === 'N/A') return '';
+
+    // If already formatted, return as-is
+    if (isNaN(value)) return value;
+
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + Number(value) * 86400000);
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const month = months[date.getMonth()];
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${day}-${month}-${year}`;
+}
+
 // Process table on page load
 window.onload = function() {
     const table = document.querySelector('table');
     if (!table) return;
+
+    
 
     const headerRow = table.querySelector('thead tr') || table.querySelector('tr');
     const headers = Array.from(headerRow.cells).map(cell => cell.textContent.trim());
@@ -453,9 +579,17 @@ window.onload = function() {
     const rows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
     rows.forEach(row => {
         const rowData = {};
-        Array.from(row.cells).forEach((cell, index) => {
-            rowData[headers[index]] = cell.textContent.trim();
-        });
+            Array.from(row.cells).forEach((cell, index) => {
+                let value = cell.textContent.trim();
+
+                // 🔥 FORMAT "Completed On" FOR MAIN TABLE DISPLAY
+                if (headers[index] === 'Completed On') {
+                    value = formatExcelSerialToDisplay(value);
+                    cell.textContent = value; // update UI cell
+                }
+
+                rowData[headers[index]] = value;
+            });
         allRowData.push(rowData);
     });
 
@@ -553,9 +687,15 @@ function formatDateForInput(dateString) {
 function calculateDateDifference(endDateValue, startDateValue) {
     const endDate = parseExcelDate(endDateValue);
     const startDate = parseExcelDate(startDateValue);
+
     if (!endDate || !startDate) return null;
-    const diffTime = endDate - startDate;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Normalize time to midnight to avoid timezone issues
+    endDate.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
+
+    const diffMs = endDate.getTime() - startDate.getTime();
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
 // 🔥 FIXED: Derived dates with UI update
@@ -604,6 +744,11 @@ function updateCalculatedFields() {
     const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
     const rowData = allRowData[rowIndex];
 
+    // 🔥 HARD RESET all calculated + derived fields
+    Object.keys(dateCalculations).forEach(field => {
+        rowData[field] = '';
+    });  
+
     // 1. Resolve derived dates FIRST (Filing Date)
     resolveDerivedDates(rowData);
 
@@ -641,6 +786,7 @@ function updateCalculatedFields() {
 
 // 🔥 FIXED: Main modal function with Edit mode calculations
 function viewEmployee(button, editMode = false) {
+    remarksConfirmed = false;
     const rowIndex = parseInt(button.getAttribute('data-row-index'));
     currentRow = button.closest('tr');
     isEditMode = editMode;
@@ -660,6 +806,10 @@ function viewEmployee(button, editMode = false) {
     for (let i = 0; i < Math.min(7, allHeaders.length); i++) {
         const label = allHeaders[i];
         const value = rowData[label] || 'N/A';
+        // 🔥 CLEAN broken Excel dates on load
+        if (typeof value === 'string' && value.startsWith('+')) {
+            rowData[label] = '';
+        }        
         originalData[label] = value;
         
         const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -698,9 +848,13 @@ function viewEmployee(button, editMode = false) {
     if (allHeaders.length > 7) {
         modalContent += '<div class="section-title">Dates & Timeline</div>';
         modalContent += '<div class="form-row-triple">';
-        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
+        for (let i = 7; i < Math.min(22, allHeaders.length); i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
+            // 🔥 CLEAN broken Excel dates on load
+            if (typeof value === 'string' && value.startsWith('+')) {
+                rowData[label] = '';
+            }            
             originalData[label] = value;
             
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -747,12 +901,16 @@ function viewEmployee(button, editMode = false) {
     }
     
     // Status & Notes Section
-    if (allHeaders.length > 25) {
+    if (allHeaders.length > 22) {
         modalContent += '<div class="section-title">Status & Notes</div>';
         modalContent += '<div class="form-row">';
-        for (let i = 25; i < allHeaders.length; i++) {
+        for (let i = 22; i < allHeaders.length; i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
+            // 🔥 CLEAN broken Excel dates on load
+            if (typeof value === 'string' && value.startsWith('+')) {
+                rowData[label] = '';
+            }            
             originalData[label] = value;
             
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -790,17 +948,21 @@ function viewEmployee(button, editMode = false) {
 // 🔥 FIXED: Date change handler
 function handleDateChange(fieldName) {
     if (!currentRow) return;
-    
-    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+
+    const rowIndex = parseInt(
+        currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index')
+    );
+
     const input = document.querySelector(`input[data-field-name="${fieldName}"]`);
-    
     if (!input) return;
-    
-    // 🔥 FIXED: Handle BOTH filled AND cleared dates
-    const newValue = input.value || '';  // Empty string when cleared
+
+    // ✅ ALWAYS store ISO-safe value, not display value
+    const newValue = input.value
+        ? new Date(input.value).toISOString().split('T')[0]
+        : '';
+
     allRowData[rowIndex][fieldName] = newValue;
-    
-    // 🔥 CRITICAL: Always recalculate when ANY date changes
+
     updateCalculatedFields();
 }
 
@@ -816,26 +978,51 @@ const criticalFields = [
 
 function saveEmployee() {
     if (!currentRow) return;
-    
-    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
-    
-    // 🔥 STEP 1: Check for NEGATIVE values first
-    const negativeFields = [];
-    criticalFields.forEach(field => {
-        const value = parseFloat(allRowData[rowIndex][field]);
-        if (!isNaN(value) && value < 0) {
-            negativeFields.push(field);
+
+    const rowIndex = parseInt(
+        currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index')
+    );
+
+    const remarks = normalizeValue(allRowData[rowIndex]['Remarks']);
+
+    // 🔍 Detect negative values
+    const negativeFields = criticalFields.filter(field => {
+        const v = Number(allRowData[rowIndex][field]);
+        return !isNaN(v) && v < 0;
+    });
+
+    const hasNegative = negativeFields.length > 0;
+
+    // 🔴 CASE 1: Negative → remarks required
+    if (hasNegative && (!remarksConfirmed || !remarks || remarks.length < 3)) {
+        showRemarksDropdown(negativeFields, rowIndex);
+        return;
+    }
+
+    // 🟢 CASE 2: No negative → auto remarks
+    if (!hasNegative && !remarks) {
+        allRowData[rowIndex]['Remarks'] = 'Negative Value Corrected';
+    }
+
+    // ✅ Set Completed On ONCE
+    const now = new Date();
+    allRowData[rowIndex]['Completed On'] =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+        // 🔍 DEBUG: Log final payload sent to Power Automate
+        console.log(
+            'FINAL PAYLOAD:',
+            buildExcelPayload(allRowData[rowIndex])
+        );        
+
+    // ✅ SINGLE backend call
+    sendUpdateToServer(allRowData[rowIndex]).then(success => {
+        if (success) {
+            proceedWithSave(rowIndex);
         }
     });
-    
-    // 🔥 STEP 2: If negative fields found, show REMARKS DROPDOWN
-    if (negativeFields.length > 0) {
-        showRemarksDropdown(negativeFields, rowIndex);
-        return; // STOP saving until user selects reason
-    }
-    
-    // ✅ No negative fields - proceed with normal save
-    proceedWithSave(rowIndex);
 }
 
 function showRemarksDropdown(negativeFields, rowIndex) {
@@ -912,6 +1099,9 @@ function confirmRemarks(rowIndex) {
     
     // 🔥 STEP 1: Save remarks to data
     allRowData[rowIndex]['Remarks'] = remarksValue;
+
+    // ✅ MARK remarks as confirmed
+    remarksConfirmed = true;
     
     // 🔥 STEP 2: CLOSE DROPDOWN ONLY (don't proceed with full save)
     document.getElementById('remarksModal').remove();
@@ -973,7 +1163,7 @@ function reopenEditModalWithRemarks(rowIndex, remarksValue) {
     if (allHeaders.length > 7) {
         modalContent += '<div class="section-title">Dates & Timeline</div>';
         modalContent += '<div class="form-row-triple">';
-        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
+        for (let i = 7; i < Math.min(22, allHeaders.length); i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -1027,14 +1217,18 @@ function reopenEditModalWithRemarks(rowIndex, remarksValue) {
             modalContent += `
                 <div class="form-group">
                     <label>Remarks <span class="editable-badge">Editable</span></label>
-                    <input type="text" id="field-remarks" data-field-name="Remarks" value="${remarksValue}" style="border: 2px solid #4caf50; background: #e8f5e8;">
+                    <input type="text" id="field-remarks"
+                    data-field-name="Remarks"
+                    value="${remarksValue}"
+                    readonly
+                    style="border: 2px solid #4caf50; background: #e8f5e8; cursor:not-allowed;">
                 </div>
             `;
             continue;
         }
         
         // Skip fields already shown in Basic/Dates sections
-        if (i < 25) continue;
+        if (i < 22) continue;
         
         const value = rowData[label] || 'N/A';
         const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -1076,20 +1270,175 @@ function cancelRemarks() {
 
 function proceedWithSave(rowIndex) {
     const inputs = document.querySelectorAll('#modalBody input');
-    
-    // Save ALL inputs including Remarks field
+
     inputs.forEach(input => {
         const fieldName = input.getAttribute('data-field-name');
-        let value = input.type === 'date' ? 
-            (input.value ? formatDate(input.value) : input.getAttribute('data-original')) : 
-            input.value;
-        
+        let value = input.type === 'date'
+            ? (input.value ? formatDate(input.value) : input.getAttribute('data-original'))
+            : input.value;
+
         allRowData[rowIndex][fieldName] = value;
     });
-    
-    
-    alert('✅ All changes saved including Remarks!');
+
+    // ✅ SET Completed on (FINAL SAVE ONLY)
+    const now = new Date();
+    const completedOn =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+    allRowData[rowIndex]['Completed On'] = completedOn;
+
+    // ✅ UPDATE MAIN TABLE UI
+    const row = currentRow;
+    const headers = Array.from(row.closest('table').querySelectorAll('th'))
+        .map(th => th.textContent.trim());
+
+    headers.forEach((header, index) => {
+        if (header === 'Remarks') {
+            row.cells[index].textContent = allRowData[rowIndex]['Remarks'];
+        }
+        if (header === 'Completed On') {
+            row.cells[index].textContent = completedOn;
+        }
+    });
+
+    // ✅ RESET STATE
+    remarksConfirmed = false;
+
+   // alert('✅ Saved successfully. Remarks & Completed On updated.');
     closeModal();
+}
+
+function hasNegativeValues(rowIndex) {
+    return criticalFields.some(field => {
+        const value = parseFloat(allRowData[rowIndex][field]);
+        return !isNaN(value) && value < 0;
+    });
+}
+
+function normalizeNumber(value) {
+    if (value === null || value === undefined) return '';
+    if (value === '' || value === 'N/A') return '';
+
+    const num = Number(value);
+    return isNaN(num) ? '' : num;
+}
+
+function sendUpdateToServer(rowData) {
+    const payload = buildExcelPayload(rowData);
+
+    return fetch(
+        'https://default189de737c93a4f5a8b686f4ca99419.12.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/88f0f304876743249179c36c028d9a6f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rxP7fmm-rptgh5Vu2T83MnliCg_ZUS_H8HkI9_fyd0A',
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }
+    )
+    .then(res => {
+        if (!res.ok) throw new Error('Excel update failed');
+
+        // Power Automate often returns 202/204 with no body
+        return true;
+    })
+    .then(() => {
+        console.log('Excel updated successfully');
+        return true;
+    })
+    .catch(err => {
+        console.error('HTTP Error:', err);
+        alert('❌ Failed to save data to Excel. Please try again.');
+        return false;
+    });
+}
+
+function toISODate(value) {
+    if (value === null || value === undefined) return '';
+
+    // 🔹 Handle string inputs
+    if (typeof value === 'string') {
+        const v = value.trim();
+
+        // Reject placeholders and corrupted values
+        if (
+            v === '' ||
+            v.toLowerCase() === 'n/a' ||
+            v.toLowerCase() === 'mm/dd/yyyy' ||
+            v.startsWith('+')
+        ) {
+            return '';
+        }
+
+        // Already ISO yyyy-mm-dd → return as-is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+            return v;
+        }
+
+        // Numeric string → treat as Excel serial
+        if (!isNaN(v)) {
+            value = Number(v);
+        }
+    }
+
+    // 🔹 Handle Excel serial numbers (THIS FIXES YOUR ISSUE)
+    if (typeof value === 'number' && value > 30000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + value * 86400000);
+
+        if (isNaN(date.getTime())) return '';
+
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // 🔹 Normal date handling (NO UTC conversion)
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+
+    // Block insane years
+    if (d.getFullYear() < 1900 || d.getFullYear() > 2100) return '';
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeValue(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') {
+        const v = value.trim();
+        if (v === '' || v.toUpperCase() === 'N/A') return '';
+        return v;
+    }
+    return value;
+}
+
+function buildExcelPayload(rowData) {
+    return {
+        "GIS ID": rowData["GIS ID"],
+
+        // 🔹 DATE FIELDS (ONLY WHAT FLOW EXPECTS)
+        "Submitted To ISG": toISODate(rowData["Submitted To ISG"]),
+        "Approved By ISG": toISODate(rowData["Approved By ISG"]),
+        "Government Agency filing date": toISODate(rowData["Government Agency filing date"]),
+        "OFC Appointment Date": toISODate(rowData["OFC Appointment Date"]),
+        "Approved Petition Start Date": toISODate(rowData["Approved Petition Start Date"]),
+        "Approved Petition End Date": toISODate(rowData["Approved Petition End Date"]),
+        "Visa Valid from Date": toISODate(rowData["Visa Valid from Date"]),
+        "Visa Valid till Date": toISODate(rowData["Visa Valid till Date"]),
+        "Completed On": toISODate(rowData["Completed On"]),
+
+        // 🔹 TEXT FIELDS
+        "Remarks": normalizeValue(rowData["Remarks"]),
+        
+        "SPOC Name": Username
+    };
 }
 
 function cancelEdit() {

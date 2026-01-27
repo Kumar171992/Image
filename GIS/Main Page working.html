@@ -41,8 +41,9 @@
             background-color: #34495e;
             color: white;
             padding: 12px;
-            text-align: left;
+            text-align: center;
             font-weight: bold;
+            font-size: 13px;
         }
         td {
             padding: 12px;
@@ -319,11 +320,75 @@
                 margin: 5% auto;
             }
         }
+
+        /* Table */
+        table {
+            font-size: 12.5px;
+        }
+
+        /* Table header */
+        th {
+            font-size: 13px;
+        }
+
+        /* Table body */
+        td {
+            font-size: 12.5px;
+        }
+
+        /* ===== User Info (Top Right) ===== */
+        header {
+            position: relative;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            text-align: right;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .login-time {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        /* Responsive handling */
+        @media (max-width: 768px) {
+            .user-info {
+                position: static;
+                margin-top: 10px;
+                text-align: center;
+            }
+        }    
+        
+        /* Prevent table flash on initial load */
+        .table-hidden {
+            visibility: hidden;
+        }        
     </style>
 </head>
 <body>
     <header>
         <h1>GIS Anomalies</h1>
+
+            <div class="user-info">
+                <div class="user-name">
+                    
+                </div>
+                <div class="login-time" id="loginTime">
+                    <!-- JS will populate date & time -->
+                </div>
+            </div>        
+
     </header>
     <main>
         <h2>GIS Data Correction</h2>
@@ -356,6 +421,25 @@ let currentRow = null;
 let isEditMode = false;
 let originalData = {};
 let allRowData = [];
+let remarksConfirmed = false;
+
+// Set login date & time when page loads
+document.addEventListener('DOMContentLoaded', function () {
+    const now = new Date();
+
+    const formattedDateTime =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear() + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+
+    const loginTimeEl = document.getElementById('loginTime');
+    if (loginTimeEl) {
+        loginTimeEl.textContent = `Logged in: ${formattedDateTime}`;
+    }
+});
+
 
 // Columns to show on main page
 const visibleColumns = [
@@ -386,19 +470,19 @@ const fieldConfig = {
     'OFC Appointment Date': { editable: true, type: 'date' },
     'Filing Date': { editable: false, type: 'date', derived: true },
     'Filling - Approved': { editable: false, type: 'number', calculated: true },
-    'Approved Petition received date': { editable: true, type: 'date' },
+
     'WP start - Gov': { editable: false, type: 'number', calculated: true },
     'Approved Petition Start Date': { editable: true, type: 'date' },
     'Approved Petition End Date': { editable: true, type: 'date' },
     'WP Duration Check': { editable: false, type: 'number', calculated: true },
-    'Application Acceptance Date': { editable: true, type: 'date' },
-    'Stamping Submission date': { editable: true, type: 'date' },
+
+
     'Visa Valid from Date': { editable: true, type: 'date' },
     'Visa Valid till Date': { editable: true, type: 'date' },
     'Visa Duration Check': { editable: false, type: 'number', calculated: true },
     'WP_Visa Check': { editable: false, type: 'number', calculated: true },
     'Current_Status': { editable: false, type: 'text' },
-    'Remarks': { editable: true, type: 'text' },
+    'Remarks': { editable: false, type: 'text' },
     'Note': { editable: false, type: 'text' },
     'Completed On': { editable: false, type: 'text' },
 };
@@ -698,7 +782,7 @@ function viewEmployee(button, editMode = false) {
     if (allHeaders.length > 7) {
         modalContent += '<div class="section-title">Dates & Timeline</div>';
         modalContent += '<div class="form-row-triple">';
-        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
+        for (let i = 7; i < Math.min(22, allHeaders.length); i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
             originalData[label] = value;
@@ -747,10 +831,10 @@ function viewEmployee(button, editMode = false) {
     }
     
     // Status & Notes Section
-    if (allHeaders.length > 25) {
+    if (allHeaders.length > 22) {
         modalContent += '<div class="section-title">Status & Notes</div>';
         modalContent += '<div class="form-row">';
-        for (let i = 25; i < allHeaders.length; i++) {
+        for (let i = 22; i < allHeaders.length; i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
             originalData[label] = value;
@@ -816,25 +900,37 @@ const criticalFields = [
 
 function saveEmployee() {
     if (!currentRow) return;
-    
-    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
-    
-    // 🔥 STEP 1: Check for NEGATIVE values first
-    const negativeFields = [];
-    criticalFields.forEach(field => {
-        const value = parseFloat(allRowData[rowIndex][field]);
-        if (!isNaN(value) && value < 0) {
-            negativeFields.push(field);
+
+    const rowIndex = parseInt(
+        currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index')
+    );
+
+    const remarks = (allRowData[rowIndex]['Remarks'] || '').trim();
+
+    // 🔥 STEP 1: First save attempt → check negative values
+    if (!remarksConfirmed) {
+        const negativeFields = [];
+
+        criticalFields.forEach(field => {
+            const value = parseFloat(allRowData[rowIndex][field]);
+            if (!isNaN(value) && value < 0) {
+                negativeFields.push(field);
+            }
+        });
+
+        if (negativeFields.length > 0) {
+            showRemarksDropdown(negativeFields, rowIndex);
+            return; // ⛔ Stop here (force remarks)
         }
-    });
-    
-    // 🔥 STEP 2: If negative fields found, show REMARKS DROPDOWN
-    if (negativeFields.length > 0) {
-        showRemarksDropdown(negativeFields, rowIndex);
-        return; // STOP saving until user selects reason
     }
-    
-    // ✅ No negative fields - proceed with normal save
+
+    // 🔥 STEP 2: Second save → validate Remarks
+    if (!remarks || remarks === 'N/A') {
+        alert('❗ Remarks is mandatory. Please provide valid remarks before saving.');
+        return;
+    }
+
+    // ✅ FINAL SAVE
     proceedWithSave(rowIndex);
 }
 
@@ -912,6 +1008,9 @@ function confirmRemarks(rowIndex) {
     
     // 🔥 STEP 1: Save remarks to data
     allRowData[rowIndex]['Remarks'] = remarksValue;
+
+    // ✅ MARK remarks as confirmed
+    remarksConfirmed = true;
     
     // 🔥 STEP 2: CLOSE DROPDOWN ONLY (don't proceed with full save)
     document.getElementById('remarksModal').remove();
@@ -973,7 +1072,7 @@ function reopenEditModalWithRemarks(rowIndex, remarksValue) {
     if (allHeaders.length > 7) {
         modalContent += '<div class="section-title">Dates & Timeline</div>';
         modalContent += '<div class="form-row-triple">';
-        for (let i = 7; i < Math.min(25, allHeaders.length); i++) {
+        for (let i = 7; i < Math.min(22, allHeaders.length); i++) {
             const label = allHeaders[i];
             const value = rowData[label] || 'N/A';
             const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -1034,7 +1133,7 @@ function reopenEditModalWithRemarks(rowIndex, remarksValue) {
         }
         
         // Skip fields already shown in Basic/Dates sections
-        if (i < 25) continue;
+        if (i < 22) continue;
         
         const value = rowData[label] || 'N/A';
         const config = fieldConfig[label] || { editable: false, type: 'text' };
@@ -1076,20 +1175,60 @@ function cancelRemarks() {
 
 function proceedWithSave(rowIndex) {
     const inputs = document.querySelectorAll('#modalBody input');
-    
-    // Save ALL inputs including Remarks field
+
     inputs.forEach(input => {
         const fieldName = input.getAttribute('data-field-name');
-        let value = input.type === 'date' ? 
-            (input.value ? formatDate(input.value) : input.getAttribute('data-original')) : 
-            input.value;
-        
+        let value = input.type === 'date'
+            ? (input.value ? formatDate(input.value) : input.getAttribute('data-original'))
+            : input.value;
+
         allRowData[rowIndex][fieldName] = value;
     });
-    
-    
-    alert('✅ All changes saved including Remarks!');
+
+    // ✅ SET Completed on (FINAL SAVE ONLY)
+    const now = new Date();
+    const completedOn =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+    allRowData[rowIndex]['Completed On'] = completedOn;
+
+    // ✅ UPDATE MAIN TABLE UI
+    const row = currentRow;
+    const headers = Array.from(row.closest('table').querySelectorAll('th'))
+        .map(th => th.textContent.trim());
+
+    headers.forEach((header, index) => {
+        if (header === 'Remarks') {
+            row.cells[index].textContent = allRowData[rowIndex]['Remarks'];
+        }
+        if (header === 'Completed On') {
+            row.cells[index].textContent = completedOn;
+        }
+    });
+
+    // ✅ SEND DATA TO BACKEND (HTTP)
+    sendUpdateToServer(allRowData[rowIndex]);
+
+    // ✅ RESET STATE
+    remarksConfirmed = false;
+
+    alert('✅ Saved successfully. Remarks & Completed On updated.');
     closeModal();
+}
+
+function sendUpdateToServer(rowData) {
+    // 🔥 Placeholder for Power Automate HTTP trigger
+    fetch('https://default189de737c93a4f5a8b686f4ca99419.12.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/88f0f304876743249179c36c028d9a6f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rxP7fmm-rptgh5Vu2T83MnliCg_ZUS_H8HkI9_fyd0A', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(rowData)
+    })
+    .then(res => res.ok ? console.log('Excel updated') : console.error('Save failed'))
+    .catch(err => console.error('HTTP Error:', err));
 }
 
 function cancelEdit() {

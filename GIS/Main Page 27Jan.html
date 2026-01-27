@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Anomalies - Correction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        main {
+            max-width: 1900px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-edit {
+            background-color: #f39c12;
+        }
+        .btn-edit:hover {
+            background-color: #e67e22;
+        }
+        .btn-save {
+            background-color: #27ae60;
+        }
+        .btn-save:hover {
+            background-color: #229954;
+        }
+        .btn-cancel {
+            background-color: #95a5a6;
+        }
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+        th.serial-number {
+            text-align: center;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: #34495e;
+        }
+        
+        td.serial-number {
+            text-align: center;
+            font-weight: bold;
+            color: #34495e;
+        }     
+        .hidden-column {
+            display: none;
+        }
+
+        /* ===== Calculated Field Styles ===== */
+        .calc-field {
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            height: 50px;
+            min-height: 50px;
+            max-height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            background-color: #f8f9fa;
+        }
+
+        .calc-field.calc-positive {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+            color: #155724 !important;
+        }
+
+        .calc-field.calc-negative {
+            background-color: #f8d7da !important;
+            border-color: #f5c6cb !important;
+            color: #721c24 !important;
+        }
+
+        .calc-field.calc-neutral {
+            background-color: #fff3cd !important;
+            border-color: #ffeaa7 !important;
+            color: #856404 !important;
+        }
+
+        .calc-positive {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .calc-positive .calc-number {
+            color: #155724;
+        }
+
+        .calc-positive .calc-label {
+            color: #0f4419;
+        }
+
+        .calc-negative {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .calc-negative .calc-number {
+            color: #721c24;
+        }
+
+        .calc-negative .calc-label {
+            color: #721c24;
+        }
+
+        .calc-neutral {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        .calc-neutral .calc-number,
+        .calc-neutral .calc-label {
+            color: #856404;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 3% auto;
+            padding: 0;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            background-color: #2c3e50;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .modal-body {
+            padding: 30px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group .value {
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            color: #495057;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            min-height: 50px;
+        }
+
+        .form-group input[type="text"]:disabled,
+        .form-group input[type="date"]:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.2rem rgba(52,152,219,0.25);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .form-row-single {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .form-row-dual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-row-triple {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .modal-footer {
+            padding: 15px 30px;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-close {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-close:hover {
+            background-color: #5a6268;
+        }
+
+        .readonly-badge {
+            background-color: #f5f5f5;
+            color: #757575;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .editable-badge {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #dc3545;
+            margin: 25px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .dates-timeline-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .dates-column-left,
+        .dates-column-right {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .dates-column-left {
+            padding-right: 20px;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .dates-column-right {
+            padding-left: 10px;
+        }
+
+        /* Each row in dates section should have consistent spacing */
+        .dates-column-left > .form-row-dual,
+        .dates-column-left > .form-row-triple,
+        .dates-column-right > .form-row-single,
+        .dates-column-right > .form-row-dual {
+            margin-bottom: 15px;
+        }
+
+        /* Ensure form groups in dates section have exact same height */
+        .dates-timeline-container .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dates-timeline-container .form-group label {
+            margin-bottom: 8px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+        }
+
+        .dates-timeline-container .form-group .value,
+        .dates-timeline-container .form-group .calc-field,
+        .dates-timeline-container .form-group input[type="date"],
+        .dates-timeline-container .form-group input[type="text"] {
+            height: 50px;
+            min-height: 50px;
+            max-height: 50px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .form-row-triple, .form-row-dual {
+                grid-template-columns: 1fr;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+            .dates-timeline-container {
+                grid-template-columns: 1fr;
+            }
+            .dates-column-left {
+                border-right: none;
+                padding-right: 0;
+            }
+        }
+
+        table {
+            font-size: 12.5px;
+        }
+
+        th {
+            font-size: 13px;
+        }
+
+        td {
+            font-size: 12.5px;
+        }
+
+        header {
+            position: relative;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            text-align: left;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .login-time {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .user-info {
+                position: static;
+                margin-top: 10px;
+                text-align: center;
+            }
+        }
+        
+        .table-hidden {
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GIS Anomalies</h1>
+        <div class="user-info">
+            <div class="user-name">
+                @{first(outputs('Compose_2'))}
+            </div>
+            <div class="login-time" id="loginTime"></div>
+        </div>        
+    </header>
+    <main>
+        <h2>GIS Data Correction</h2>
+        @{body('Create_HTML_table')}
+    </main>
+
+    <!-- Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Employee Details</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <div id="editModeButtons" style="display: none;">
+                    <button class="btn-save" onclick="saveEmployee()">Save Changes</button>
+                    <button class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+                </div>
+                <button class="btn-close" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+let modalContent = '';
+let currentRowIndex = -1;
+let currentRow = null;
+let isEditMode = false;
+let originalData = {};
+let allRowData = [];
+let remarksConfirmed = false;
+let Username = '';
+
+const now = new Date();
+const formatted =
+    now.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    }) + ' ' +
+    now.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+document.getElementById('loginTime').textContent = formatted;
+
+document.addEventListener('DOMContentLoaded', function () {
+    const now = new Date();
+    const formattedDateTime =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear() + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+
+    const loginTimeEl = document.getElementById('loginTime');
+    if (loginTimeEl) {
+        loginTimeEl.textContent = `Logged in: ${formattedDateTime}`;
+    }
+
+    const userEl = document.querySelector('.user-name');
+    if (userEl) {
+        Username = userEl.textContent.trim();
+    }
+});
+
+// Columns to show on main page
+const visibleColumns = [
+    'GIS ID', 'Employee ID', 'Employee Name', 'Destination Country',
+    'Visa Type', 'Current_Status', 'Remarks', 'Completed On'
+];
+
+// Display names for columns
+const columnDisplayNames = {
+    'RevisedVisaType': 'Visa Type',
+    'Current_Status': 'Current Status'
+};
+
+// Field configuration
+const fieldConfig = {
+    'GIS ID': { editable: false, type: 'number' },
+    'Employee ID': { editable: false, type: 'number' },
+    'Employee Code': { editable: false, type: 'text' },
+    'Employee Name': { editable: false, type: 'text' },
+    'GEO': { editable: false, type: 'text' },
+    'Destination Country': { editable: false, type: 'text' },
+    'Source Country': { editable: false, type: 'text' },
+    'RevisedVisaType': { editable: false, type: 'text' },
+    'Visa Sub Type': { editable: false, type: 'text' },
+    'Submitted To ISG': { editable: true, type: 'date' },
+    'Approved By ISG': { editable: true, type: 'date' },
+    'Approved - Submitted': { editable: false, type: 'number', calculated: true },
+    'Government Agency filing date': { editable: true, type: 'date' },
+    'OFC Appointment Date': { editable: true, type: 'date' },
+    'Filing Date': { editable: false, type: 'date', derived: true },
+    'Filling - Approved': { editable: false, type: 'number', calculated: true },
+    'WP start - Gov': { editable: false, type: 'number', calculated: true },
+    'Approved Petition Start Date': { editable: true, type: 'date' },
+    'Approved Petition End Date': { editable: true, type: 'date' },
+    'WP Duration Check': { editable: false, type: 'number', calculated: true },
+    'Visa Valid from Date': { editable: true, type: 'date' },
+    'Visa Valid till Date': { editable: true, type: 'date' },
+    'Visa Duration Check': { editable: false, type: 'number', calculated: true },
+    'WP_Visa Check': { editable: false, type: 'number', calculated: true },
+    'Current_Status': { editable: false, type: 'text' },
+    'Remarks': { editable: false, type: 'text' },
+    'Note': { editable: false, type: 'text' },
+    'Completed On': { editable: false, type: 'text' },
+};
+
+// Derived date rules
+const derivedDateRules = {
+    'Filing Date': {
+        priorityDates: [
+            'Government Agency filing date',
+            'OFC Appointment Date'
+        ]
+    }
+};
+
+// Date calculation rules
+const dateCalculations = {
+    'Approved - Submitted': {
+        startDate: 'Submitted To ISG',
+        endDate: 'Approved By ISG'
+    },
+    'Filling - Approved': {
+        startDate: 'Approved By ISG',
+        endDate: 'Filing Date'
+    },
+    'WP start - Gov': {
+        startDate: 'Filing Date',
+        endDate: 'Approved Petition Start Date'
+    },
+    'WP Duration Check': {
+        startDate: 'Approved Petition Start Date',
+        endDate: 'Approved Petition End Date'
+    },
+    'Visa Duration Check': {
+        startDate: 'Visa Valid from Date',
+        endDate: 'Visa Valid till Date'
+    },
+    'WP_Visa Check': {
+        startDate: 'Approved Petition Start Date',
+        endDate: 'Visa Valid from Date'
+    }
+};
+
+// 🔥 Convert Excel serial number to proper date
+function excelSerialToDate(serial) {
+    if (!serial || isNaN(serial)) return null;
+    const excelEpoch = new Date(1899, 11, 30);
+    const days = parseInt(serial);
+    const milliseconds = days * 24 * 60 * 60 * 1000;
+    return new Date(excelEpoch.getTime() + milliseconds);
+}
+
+// 🔥 Enhanced date parser to handle Excel serial numbers
+function parseDate(dateStr) {
+    if (!dateStr || dateStr === 'N/A' || dateStr === '') return null;
+    
+    dateStr = dateStr.toString().trim();
+    
+    // Check if it's an Excel serial number (5 digits like 45981)
+    if (/^\d{5}$/.test(dateStr)) {
+        const serial = parseInt(dateStr);
+        if (serial > 25000 && serial < 60000) {
+            const date = excelSerialToDate(serial);
+            console.log(`   ✅ Parsed Excel serial ${serial} to: ${date.toISOString()}`);
+            return date;
+        }
+    }
+    
+    // Try parsing as ISO format (YYYY-MM-DD)
+    let date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+        console.log(`   ✅ Parsed as ISO: ${date.toISOString()}`);
+        return date;
+    }
+    
+    // Try parsing DD/MM/YYYY format
+    const ddmmyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (ddmmyyyy) {
+        const [, day, month, year] = ddmmyyyy;
+        date = new Date(year, month - 1, day);
+        if (!isNaN(date.getTime())) {
+            console.log(`   ✅ Parsed as DD/MM/YYYY: ${date.toISOString()}`);
+            return date;
+        }
+    }
+    
+    // Try parsing DD-Mon-YYYY format (07-Oct-2025)
+    const ddmonyyyy = dateStr.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+    if (ddmonyyyy) {
+        const [, day, monthStr, year] = ddmonyyyy;
+        const months = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+        const month = months[monthStr];
+        if (month !== undefined) {
+            date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) {
+                console.log(`   ✅ Parsed as DD-Mon-YYYY: ${date.toISOString()}`);
+                return date;
+            }
+        }
+    }
+    
+    console.log(`   ❌ Failed to parse: ${dateStr}`);
+    return null;
+}
+
+// 🔥 Format date for display (DD-Mon-YYYY)
+function formatDate(dateString) {
+    if (!dateString || dateString === 'N/A' || dateString === '') return '';
+    
+    const date = parseDate(dateString);
+    if (!date) return '';
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const month = months[date.getMonth()];
+    return `${day}-${month}-${date.getFullYear()}`;
+}
+
+// 🔥 Format date for input field (YYYY-MM-DD)
+function formatDateForInput(dateString) {
+    if (!dateString || dateString === 'N/A' || dateString === '') return '';
+    
+    const date = parseDate(dateString);
+    if (!date) return '';
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 🔥 Calculate date difference in days
+function calculateDateDifference(endDateStr, startDateStr) {
+    console.log(`   📐 calculateDateDifference(end: ${endDateStr}, start: ${startDateStr})`);
+    
+    if (!endDateStr || !startDateStr || endDateStr === 'N/A' || startDateStr === 'N/A') {
+        console.log(`   ⚠️ Invalid input dates`);
+        return null;
+    }
+
+    const endDate = parseDate(endDateStr);
+    const startDate = parseDate(startDateStr);
+
+    if (!endDate || !startDate || isNaN(endDate.getTime()) || isNaN(startDate.getTime())) {
+        console.log(`   ⚠️ Failed to parse dates`);
+        return null;
+    }
+
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    console.log(`   📊 Result: ${diffDays} days`);
+    return diffDays;
+}
+
+// 🔥 Handle date change
+function handleDateChange(fieldName) {
+    console.log(`📅 Date changed: ${fieldName}`);
+    
+    const input = document.querySelector(`input[data-field-name="${fieldName}"]`);
+    if (input && currentRow) {
+        const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+        allRowData[rowIndex][fieldName] = input.value;
+        console.log(`   Updated ${fieldName} to: ${input.value}`);
+    }
+    
+    updateCalculatedFields();
+}
+
+// 🔥 Resolve derived dates
+function resolveDerivedDates(rowData) {
+    for (const [field, rule] of Object.entries(derivedDateRules)) {
+        let resolvedValue = '';
+        
+        for (const sourceField of rule.priorityDates) {
+            const value = rowData[sourceField];
+            if (value && value !== 'N/A' && value !== '') {
+                resolvedValue = value;
+                break;
+            }
+        }
+        
+        if (!resolvedValue) {
+            resolvedValue = '';
+        }
+        
+        if (rowData[field] !== resolvedValue) {
+            rowData[field] = resolvedValue;
+        }
+        
+        const fieldElement = document.querySelector(`[data-calc-field="${field}"]`);
+        if (fieldElement) {
+            if (resolvedValue && resolvedValue !== 'N/A' && resolvedValue !== '') {
+                fieldElement.textContent = formatDate(resolvedValue);
+                fieldElement.classList.add('calc-positive');
+            } else {
+                fieldElement.textContent = 'N/A';
+                fieldElement.classList.remove('calc-positive', 'calc-negative');
+            }
+        }
+    }
+}
+
+// 🔥 Update calculated fields
+function updateCalculatedFields() {
+    if (!currentRow) return;
+    
+    const rowIndex = parseInt(currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index'));
+    const rowData = allRowData[rowIndex];
+
+    console.log('🔍 Starting calculations for row:', rowIndex);
+
+    Object.keys(dateCalculations).forEach(field => {
+        rowData[field] = '';
+    });  
+
+    resolveDerivedDates(rowData);
+
+    for (const [calcField, config] of Object.entries(dateCalculations)) {
+        console.log(`\n🧮 Calculating: ${calcField}`);
+        
+        const startValue = rowData[config.startDate];
+        const endValue = rowData[config.endDate];
+        
+        console.log(`   Start (${config.startDate}): ${startValue}`);
+        console.log(`   End (${config.endDate}): ${endValue}`);
+        
+        const calcElement = document.querySelector(`[data-calc-field="${calcField}"]`);
+        if (!calcElement) {
+            console.log(`   ⚠️ Element not found for ${calcField}`);
+            continue;
+        }
+
+        calcElement.classList.remove('calc-negative', 'calc-positive', 'calc-neutral');
+        calcElement.innerHTML = '';
+
+        if (!startValue || !endValue || startValue === 'N/A' || endValue === 'N/A' || startValue === '' || endValue === '') {
+            console.log(`   ⚠️ Missing dates, skipping calculation`);
+            calcElement.textContent = 'N/A';
+            rowData[calcField] = '';
+            continue;
+        }
+        
+        const difference = calculateDateDifference(endValue, startValue);
+        console.log(`   ✅ Difference: ${difference}`);
+
+        if (difference === null || difference === undefined || isNaN(difference)) {
+            calcElement.textContent = 'N/A';
+            rowData[calcField] = '';
+            continue;
+        }
+
+        rowData[calcField] = difference.toString();
+        
+        const absValue = Math.abs(difference);
+        
+        if (difference >= 0) {
+            calcElement.classList.add('calc-positive');
+            calcElement.textContent = difference;
+        } else {
+            calcElement.classList.add('calc-negative');
+            calcElement.textContent = difference;
+        }
+    }
+    
+    console.log('✅ Calculations complete');
+}
+
+// 🔥 Helper function to render individual date fields
+function renderDateField(i, label, rowData, fieldConfig, editMode, originalData) {
+    const value = rowData[label] || 'N/A';
+    
+    if (typeof value === 'string' && value.startsWith('+')) {
+        rowData[label] = '';
+    }
+    
+    originalData[label] = value;
+    
+    const config = fieldConfig[label] || { editable: false, type: 'text' };
+    const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+    
+    let fieldHTML = '';
+    
+    if (editMode && config.editable) {
+        if (config.type === 'date') {
+            const dateValue = formatDateForInput(value);
+            fieldHTML = `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <input type="date" id="field-${i}" data-field-name="${label}" value="${dateValue}" data-original="${value}" onchange="handleDateChange('${label}')">
+                </div>
+            `;
+        } else {
+            fieldHTML = `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                </div>
+            `;
+        }
+    } else {
+        let displayValue = config.type === 'date' ? formatDate(value) : value;
+        
+        // For calculated or derived fields, use calc-field class only
+        if (config.calculated || config.derived) {
+            fieldHTML = `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <div class="calc-field" data-calc-field="${label}">Calculating...</div>
+                </div>
+            `;
+        } else {
+            // For regular read-only fields, use value class
+            fieldHTML = `
+                <div class="form-group">
+                    <label>${label} ${badge}</label>
+                    <div class="value">${displayValue}</div>
+                </div>
+            `;
+        }
+    }
+    
+    return fieldHTML;
+}
+
+function formatExcelSerialToDisplay(value) {
+    if (!value || value === 'N/A') return '';
+    if (isNaN(value)) return value;
+
+    const date = excelSerialToDate(Number(value));
+    if (!date) return value;
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const month = months[date.getMonth()];
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${day}-${month}-${year}`;
+}
+
+// Process table on page load
+window.onload = function() {
+    const table = document.querySelector('table');
+    if (!table) return;
+
+    const headerRow = table.querySelector('thead tr') || table.querySelector('tr');
+    const headers = Array.from(headerRow.cells).map(cell => cell.textContent.trim());
+    
+    const rows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
+    rows.forEach(row => {
+        const rowData = {};
+        Array.from(row.cells).forEach((cell, index) => {
+            let value = cell.textContent.trim();
+
+            if (headers[index] === 'Completed On') {
+                value = formatExcelSerialToDisplay(value);
+                cell.textContent = value;
+            }
+
+            rowData[headers[index]] = value;
+        });
+        allRowData.push(rowData);
+    });
+
+    const snHeader = document.createElement('th');
+    snHeader.textContent = 'S.No';
+    snHeader.className = 'serial-number';
+    headerRow.insertBefore(snHeader, headerRow.firstChild);
+
+    headers.forEach((header, index) => {
+        if (!visibleColumns.includes(header)) {
+            headerRow.cells[index + 1].classList.add('hidden-column');
+        }
+    });
+
+    headers.forEach((header, index) => {
+        if (columnDisplayNames[header]) {
+            headerRow.cells[index + 1].textContent = columnDisplayNames[header];
+        }
+    });
+
+    if (!headerRow.textContent.includes('Action')) {
+        const actionHeader = document.createElement('th');
+        actionHeader.textContent = 'Action';
+        headerRow.appendChild(actionHeader);
+    }
+
+    rows.forEach((row, rowIndex) => {
+        const snCell = document.createElement('td');
+        snCell.textContent = rowIndex + 1;
+        snCell.className = 'serial-number';
+        row.insertBefore(snCell, row.firstChild);
+
+        headers.forEach((header, index) => {
+            if (!visibleColumns.includes(header)) {
+                row.cells[index + 1].classList.add('hidden-column');
+            }
+        });
+
+        if (row.cells.length === headerRow.cells.length) return;
+        
+        const actionCell = document.createElement('td');
+        const viewButton = document.createElement('button');
+        viewButton.textContent = 'View';
+        viewButton.setAttribute('data-row-index', rowIndex);
+        viewButton.onclick = function() { viewEmployee(this, false); };
+        
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.className = 'btn-edit';
+        editButton.setAttribute('data-row-index', rowIndex);
+        editButton.onclick = function() { viewEmployee(this, true); };
+        
+        actionCell.appendChild(viewButton);
+        actionCell.appendChild(editButton);
+        row.appendChild(actionCell);
+    });
+};
+
+// 🔥 Main modal function with Edit mode calculations
+function viewEmployee(button, editMode = false) {
+    remarksConfirmed = false;
+    const rowIndex = parseInt(button.getAttribute('data-row-index'));
+    currentRow = button.closest('tr');
+    isEditMode = editMode;
+    
+    const rowData = allRowData[rowIndex];
+    const allHeaders = Object.keys(rowData);
+    
+    originalData = {};
+    let modalContent = '';
+    
+    document.getElementById('modalTitle').textContent = editMode ? 'Edit Employee Details' : 'Employee Details';
+    document.getElementById('editModeButtons').style.display = editMode ? 'block' : 'none';
+    
+    // Basic Information Section with Employee Name in Title
+    const employeeNameIndex = allHeaders.indexOf('Employee Name');
+    const employeeName = employeeNameIndex !== -1 ? (rowData['Employee Name'] || 'N/A') : 'N/A';
+
+    modalContent += `<div class="section-title">Basic Information of ${employeeName}</div>`;
+
+    const basicInfoStructure = [
+        { fields: ['GIS ID', 'Employee Code', 'Destination Country'], layout: 'triple' },
+        { fields: ['Source Country', 'Visa Type', 'Visa Sub Type'], layout: 'triple' }
+    ];
+
+    basicInfoStructure.forEach((row, rowIdx) => {
+        modalContent += `<div class="form-row-${row.layout}">`;
+        
+        row.fields.forEach(label => {
+            const i = allHeaders.indexOf(label);
+            
+            if (i !== -1) {
+                const value = rowData[label] || 'N/A';
+                
+                if (typeof value === 'string' && value.startsWith('+')) {
+                    rowData[label] = '';
+                }
+                
+                originalData[label] = value;
+                
+                const config = fieldConfig[label] || { editable: false, type: 'text' };
+                const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+                
+                if (editMode && config.editable) {
+                    if (config.type === 'date') {
+                        const dateValue = formatDateForInput(value);
+                        modalContent += `
+                            <div class="form-group">
+                                <label>${label} ${badge}</label>
+                                <input type="date" id="field-${i}" data-field-name="${label}" value="${dateValue}" data-original="${value}" onchange="handleDateChange('${label}')">
+                            </div>
+                        `;
+                    } else {
+                        modalContent += `
+                            <div class="form-group">
+                                <label>${label} ${badge}</label>
+                                <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                            </div>
+                        `;
+                    }
+                } else {
+                    const displayValue = config.type === 'date' ? formatDate(value) : value;
+                    modalContent += `
+                        <div class="form-group">
+                            <label>${label} ${badge}</label>
+                            <div class="value">${displayValue}</div>
+                        </div>
+                    `;
+                }
+            }
+        });
+        
+        modalContent += '</div>';
+    });
+    
+    // Date Fields Section with Live Calculations
+    if (allHeaders.length > 7) {
+        modalContent += '<div class="section-title">Dates & Timeline</div>';
+        modalContent += '<div class="dates-timeline-container">';
+        
+        // LEFT COLUMN
+        modalContent += '<div class="dates-column-left">';
+        
+        modalContent += '<div class="form-row-dual">';
+        ['Submitted To ISG', 'Approved By ISG'].forEach(label => {
+            const i = allHeaders.indexOf(label);
+            if (i !== -1) {
+                modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+            }
+        });
+        modalContent += '</div>';
+        
+        modalContent += '<div class="form-row-triple">';
+        ['Government Agency filing date', 'OFC Appointment Date', 'Filing Date'].forEach(label => {
+            const i = allHeaders.indexOf(label);
+            if (i !== -1) {
+                modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+            }
+        });
+        modalContent += '</div>';
+        
+        modalContent += '<div class="form-row-dual">';
+        ['Approved Petition Start Date', 'Approved Petition End Date'].forEach(label => {
+            const i = allHeaders.indexOf(label);
+            if (i !== -1) {
+                modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+            }
+        });
+        modalContent += '</div>';
+        
+        modalContent += '<div class="form-row-dual">';
+        ['Visa Valid from Date', 'Visa Valid till Date'].forEach(label => {
+            const i = allHeaders.indexOf(label);
+            if (i !== -1) {
+                modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+            }
+        });
+        modalContent += '</div>';
+        
+        modalContent += '</div>'; // End left column
+        
+        // RIGHT COLUMN
+        modalContent += '<div class="dates-column-right">';
+        
+        modalContent += '<div class="form-row-single">';
+        const i1 = allHeaders.indexOf('Approved - Submitted');
+        if (i1 !== -1) {
+            modalContent += renderDateField(i1, 'Approved - Submitted', rowData, fieldConfig, editMode, originalData);
+        }
+        modalContent += '</div>';
+        
+        modalContent += '<div class="form-row-dual">';
+        ['Filling - Approved', 'WP start - Gov'].forEach(label => {
+            const i = allHeaders.indexOf(label);
+            if (i !== -1) {
+                modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+            }
+        });
+        modalContent += '</div>';
+        
+        modalContent += '<div class="form-row-single">';
+        const i3 = allHeaders.indexOf('WP Duration Check');
+        if (i3 !== -1) {
+            modalContent += renderDateField(i3, 'WP Duration Check', rowData, fieldConfig, editMode, originalData);
+        }
+        modalContent += '</div>';
+        
+        modalContent += '<div class="form-row-dual">';
+        ['WP_Visa Check', 'Visa Duration Check'].forEach(label => {
+            const i = allHeaders.indexOf(label);
+            if (i !== -1) {
+                modalContent += renderDateField(i, label, rowData, fieldConfig, editMode, originalData);
+            }
+        });
+        modalContent += '</div>';
+        
+        modalContent += '</div>'; // End right column
+        modalContent += '</div>'; // End dates-timeline-container
+    }
+    
+    // Status & Notes Section
+    if (allHeaders.length > 22) {
+        modalContent += '<div class="section-title">Status & Notes</div>';
+        modalContent += '<div class="form-row">';
+        for (let i = 22; i < allHeaders.length; i++) {
+            const label = allHeaders[i];
+            const value = rowData[label] || 'N/A';
+            
+            if (typeof value === 'string' && value.startsWith('+')) {
+                rowData[label] = '';
+            }            
+            originalData[label] = value;
+            
+            const config = fieldConfig[label] || { editable: false, type: 'text' };
+            const badge = config.editable ? '<span class="editable-badge">Editable</span>' : '<span class="readonly-badge">Read-only</span>';
+            
+            if (editMode && config.editable) {
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <input type="text" id="field-${i}" data-field-name="${label}" value="${value}">
+                    </div>
+                `;
+            } else {
+                modalContent += `
+                    <div class="form-group">
+                        <label>${label} ${badge}</label>
+                        <div class="value">${value}</div>
+                    </div>
+                `;
+            }
+        }
+        modalContent += '</div>';
+    }
+    
+    document.getElementById('modalBody').innerHTML = modalContent;
+    document.getElementById('employeeModal').style.display = 'block';
+    
+    setTimeout(() => {
+        updateCalculatedFields();
+    }, 50);
+}
+
+// Critical fields to check for negative values
+const criticalFields = [
+    'Approved - Submitted',
+    'Filling - Approved', 
+    'WP start - Gov',
+    'WP Duration Check',
+    'Visa Duration Check',
+    'WP_Visa Check'
+];
+
+function saveEmployee() {
+    if (!currentRow) return;
+
+    const rowIndex = parseInt(
+        currentRow.querySelector('button[data-row-index]').getAttribute('data-row-index')
+    );
+
+    const remarks = normalizeValue(allRowData[rowIndex]['Remarks']);
+
+    const negativeFields = criticalFields.filter(field => {
+        const v = Number(allRowData[rowIndex][field]);
+        return !isNaN(v) && v < 0;
+    });
+
+    const hasNegative = negativeFields.length > 0;
+
+    if (hasNegative && (!remarksConfirmed || !remarks || remarks.length < 3)) {
+        showRemarksDropdown(negativeFields, rowIndex);
+        return;
+    }
+
+    if (!hasNegative && !remarks) {
+        allRowData[rowIndex]['Remarks'] = 'Negative Value Corrected';
+    }
+
+    const now = new Date();
+    allRowData[rowIndex]['Completed On'] =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+    console.log('FINAL PAYLOAD:', buildExcelPayload(allRowData[rowIndex]));        
+
+    sendUpdateToServer(allRowData[rowIndex]).then(success => {
+        if (success) {
+            proceedWithSave(rowIndex);
+        }
+    });
+}
+
+function showRemarksDropdown(negativeFields, rowIndex) {
+    const negativeFieldsList = negativeFields.join(', ');
+    const message = `⚠️ Negative values found in:\n${negativeFieldsList}\n\nPlease select reason in Remarks:`;
+    
+    const dropdownHtml = `
+        <div id="remarksModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:white;padding:30px;border-radius:10px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;">
+                <h3 style="color:#d32f2f;margin-top:0;">${message}</h3>
+                <div style="margin:20px 0;">
+                    <label style="font-weight:bold;display:block;margin-bottom:10px;">Select Reason:</label>
+                    <select id="reasonSelect" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:16px;">
+                        <option value="">-- Select Reason --</option>
+                        <option value="Pre Hire">Pre Hire</option>
+                        <option value="Filed before the case received">Filed before the case received</option>
+                        <option value="others">Others</option>
+                    </select>
+                </div>
+                <div id="othersInput" style="display:none;margin:20px 0;">
+                    <label style="font-weight:bold;display:block;margin-bottom:10px;">Enter details (Max 50 chars):</label>
+                    <input type="text" id="othersText" maxlength="50" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:16px;" placeholder="Enter reason...">
+                    <div style="font-size:12px;color:#666;margin-top:5px;">(<span id="charCount">0</span>/50 characters)</div>
+                </div>
+                <div style="text-align:right;">
+                    <button onclick="cancelRemarks()" style="background:#ccc;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;margin-right:10px;">Cancel</button>
+                    <button onclick="confirmRemarks(${rowIndex})" style="background:#4caf50;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', dropdownHtml);
+    
+    document.getElementById('reasonSelect').onchange = function() {
+        const othersDiv = document.getElementById('othersInput');
+        const othersInput = document.getElementById('othersText');
+        const charCount = document.getElementById('charCount');
+        
+        if (this.value === 'others') {
+            othersDiv.style.display = 'block';
+            othersInput.focus();
+        } else {
+            othersDiv.style.display = 'none';
+        }
+        
+        othersInput.oninput = function() {
+            charCount.textContent = this.value.length;
+        };
+    };
+}
+
+function confirmRemarks(rowIndex) {
+    const select = document.getElementById('reasonSelect');
+    const othersInput = document.getElementById('othersText');
+    let remarksValue = select.value;
+    
+    if (remarksValue === 'others') {
+        remarksValue = othersInput.value.trim();
+        if (!remarksValue || remarksValue.length > 50) {
+            alert('Please enter valid reason (1-50 characters)');
+            return;
+        }
+    }
+    
+    if (!remarksValue || remarksValue === '') {
+        alert('Please select a reason');
+        return;
+    }
+    
+    allRowData[rowIndex]['Remarks'] = remarksValue;
+    remarksConfirmed = true;
+    document.getElementById('remarksModal').remove();
+    
+    alert(`✅ Remarks "${remarksValue}" added! You can now save your changes.`);
+    
+    // Update the remarks field in the modal if it exists
+    const remarksInput = document.querySelector('input[data-field-name="Remarks"]');
+    if (remarksInput) {
+        remarksInput.value = remarksValue;
+    }
+}
+
+function cancelRemarks() {
+    document.getElementById('remarksModal').remove();
+}
+
+function proceedWithSave(rowIndex) {
+    const inputs = document.querySelectorAll('#modalBody input');
+
+    inputs.forEach(input => {
+        const fieldName = input.getAttribute('data-field-name');
+        let value = input.type === 'date'
+            ? (input.value ? formatDate(input.value) : input.getAttribute('data-original'))
+            : input.value;
+
+        allRowData[rowIndex][fieldName] = value;
+    });
+
+    const now = new Date();
+    const completedOn =
+        String(now.getDate()).padStart(2, '0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+        '-' + now.getFullYear();
+
+    allRowData[rowIndex]['Completed On'] = completedOn;
+
+    const row = currentRow;
+    const headers = Array.from(row.closest('table').querySelectorAll('th'))
+        .map(th => th.textContent.trim());
+
+    headers.forEach((header, index) => {
+        if (header === 'Remarks') {
+            row.cells[index].textContent = allRowData[rowIndex]['Remarks'];
+        }
+        if (header === 'Completed On') {
+            row.cells[index].textContent = completedOn;
+        }
+    });
+
+    remarksConfirmed = false;
+    closeModal();
+}
+
+function normalizeNumber(value) {
+    if (value === null || value === undefined) return '';
+    if (value === '' || value === 'N/A') return '';
+    const num = Number(value);
+    return isNaN(num) ? '' : num;
+}
+
+function sendUpdateToServer(rowData) {
+    const payload = buildExcelPayload(rowData);
+
+    return fetch(
+        'https://default189de737c93a4f5a8b686f4ca99419.12.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/88f0f304876743249179c36c028d9a6f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rxP7fmm-rptgh5Vu2T83MnliCg_ZUS_H8HkI9_fyd0A',
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }
+    )
+    .then(res => {
+        if (!res.ok) throw new Error('Excel update failed');
+        return true;
+    })
+    .then(() => {
+        console.log('Excel updated successfully');
+        return true;
+    })
+    .catch(err => {
+        console.error('HTTP Error:', err);
+        alert('❌ Failed to save data to Excel. Please try again.');
+        return false;
+    });
+}
+
+function toISODate(value) {
+    if (value === null || value === undefined) return '';
+
+    if (typeof value === 'string') {
+        const v = value.trim();
+
+        if (
+            v === '' ||
+            v.toLowerCase() === 'n/a' ||
+            v.toLowerCase() === 'mm/dd/yyyy' ||
+            v.startsWith('+')
+        ) {
+            return '';
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+            return v;
+        }
+
+        if (!isNaN(v)) {
+            value = Number(v);
+        }
+    }
+
+    if (typeof value === 'number' && value > 30000) {
+        const date = excelSerialToDate(value);
+        if (!date || isNaN(date.getTime())) return '';
+
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+
+    if (d.getFullYear() < 1900 || d.getFullYear() > 2100) return '';
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeValue(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') {
+        const v = value.trim();
+        if (v === '' || v.toUpperCase() === 'N/A') return '';
+        return v;
+    }
+    return value;
+}
+
+function buildExcelPayload(rowData) {
+    return {
+        "GIS ID": rowData["GIS ID"],
+        "Submitted To ISG": toISODate(rowData["Submitted To ISG"]),
+        "Approved By ISG": toISODate(rowData["Approved By ISG"]),
+        "Government Agency filing date": toISODate(rowData["Government Agency filing date"]),
+        "OFC Appointment Date": toISODate(rowData["OFC Appointment Date"]),
+        "Approved Petition Start Date": toISODate(rowData["Approved Petition Start Date"]),
+        "Approved Petition End Date": toISODate(rowData["Approved Petition End Date"]),
+        "Visa Valid from Date": toISODate(rowData["Visa Valid from Date"]),
+        "Visa Valid till Date": toISODate(rowData["Visa Valid till Date"]),
+        "Completed On": toISODate(rowData["Completed On"]),
+        "Remarks": normalizeValue(rowData["Remarks"]),
+        "SPOC Name": Username
+    };
+}
+
+function cancelEdit() {
+    closeModal();
+}
+
+function closeModal() {
+    document.getElementById('employeeModal').style.display = 'none';
+    currentRow = null;
+    isEditMode = false;
+    originalData = {};
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('employeeModal');
+    if (event.target === modal) closeModal();
+};
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
