@@ -4,34 +4,9 @@
 const API_URL = "https://default189de737c93a4f5a8b686f4ca99419.12.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d4314734ce20444c881f3001a00c8e81/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=A0IfGNN7q_BQZqUGjlkmK2Mx4rhVqQ_P96TvUBbPjyA";
 
 /****************************************************
- * DOM ELEMENTS
+ * DOM ROOT
  ****************************************************/
-const totalAppsEl = document.getElementById("totalApps");
-const approvedEl  = document.getElementById("approved");
-const pendingEl   = document.getElementById("pending");
-const tableBody   = document.querySelector("#dataTable tbody");
-
-/****************************************************
- * HELPER FUNCTIONS
- ****************************************************/
-function getStatusClass(status) {
-  if (!status) return "";
-
-  if (status === "Work Permit Approved") return "status-approved";
-  if (status.includes("Pending")) return "status-pending";
-  if (status.includes("Withdrawn")) return "status-withdrawn";
-
-  return "";
-}
-
-function formatDate(value) {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  if (isNaN(date)) return value;
-
-  return date.toISOString().split("T")[0];
-}
+const appRoot = document.getElementById("app");
 
 /****************************************************
  * MAIN LOAD FUNCTION
@@ -50,53 +25,52 @@ async function loadDashboard() {
       throw new Error("Invalid JSON format");
     }
 
-    renderKPIs(data);
-    renderTable(data);
+    renderVisaTypeSummary(data);
 
   } catch (error) {
     console.error("Dashboard load error:", error);
-    tableBody.innerHTML =
-      `<tr><td colspan="5">Unable to load dashboard data</td></tr>`;
+    appRoot.innerHTML = `<p class="error">Unable to load dashboard data</p>`;
   }
 }
 
 /****************************************************
- * KPI RENDERING
+ * VISA TYPE SUMMARY (VALIDATION STEP)
  ****************************************************/
-function renderKPIs(data) {
-  totalAppsEl.innerText = data.length;
+function renderVisaTypeSummary(data) {
 
-  approvedEl.innerText = data.filter(d =>
-    d.application?.revisedStatus === "Work Permit Approved"
-  ).length;
+  // Total records
+  const totalRecords = data.length;
 
-  pendingEl.innerText = data.filter(d =>
-    d.application?.revisedStatus?.includes("Pending")
-  ).length;
-}
-
-/****************************************************
- * TABLE RENDERING
- ****************************************************/
-function renderTable(data) {
-  tableBody.innerHTML = "";
+  // Group by Visa Type
+  const visaTypeSummary = {};
 
   data.forEach(row => {
-    const status = row.application?.revisedStatus || "-";
-    const statusClass = getStatusClass(status);
+    const visaType = row.application?.Visa_Type || "Unknown";
 
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${row.employee?.employeeId || "-"}</td>
-      <td>${row.employee?.name || "-"}</td>
-      <td class="${statusClass}">${status}</td>
-      <td>${row.application?.destinationCountry || "-"}</td>
-      <td>${formatDate(row.dates?.govtFilingDate)}</td>
-    `;
-
-    tableBody.appendChild(tr);
+    visaTypeSummary[visaType] =
+      (visaTypeSummary[visaType] || 0) + 1;
   });
+
+  // Build HTML
+  let html = `
+    <section class="summary">
+      <h2>Data Validation Summary</h2>
+      <p><strong>Total Records:</strong> ${totalRecords}</p>
+
+      <h3>Records by Visa Type</h3>
+      <ul>
+  `;
+
+  Object.entries(visaTypeSummary).forEach(([type, count]) => {
+    html += `<li><strong>${type}</strong>: ${count}</li>`;
+  });
+
+  html += `
+      </ul>
+    </section>
+  `;
+
+  appRoot.innerHTML = html;
 }
 
 /****************************************************
